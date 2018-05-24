@@ -26,6 +26,11 @@ Packaging has been done by Hannes Vasyura-Bathke.
   Sciences, Vol. 66, pp. 27-57, Springer-Verlag, Berlin/Heidelberg, Germany,
   1997.
 
+- Wang, R., Heimann, S., Zhang, Y., Wang, H., & Dahm, T., 2017. Complete
+  synthetic seismograms based on a spherical self-gravitating Earth model with
+  an atmosphere ocean mantle core structure, Geophys, J. Int., 210,
+  1739-1764.
+
 ## Compile and install
 
 ```
