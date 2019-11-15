@@ -11,4 +11,5 @@
 /config.log
 /config.status
 *.o
+*.mod
 /src/fomosto_qssp2017
