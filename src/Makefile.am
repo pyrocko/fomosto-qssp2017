@@ -6,6 +6,7 @@ fomosto_qssp2017_SOURCES = banddpasss.f brunewvlet.f butterworth.f caxcb.f cdsvd
                             qpspropg.f qpstart0a.f qpstart0.f qpstart0g.f qpstart2t.f qpstart4a.f qpstart4.f \
                             qpstart4g.f qpstart6a.f qpstart6.f qpstart6g.f qpsublayer.f qptmat.f qptprop.f \
                             qpwvint.f ruku.f skipdoc.f spbdphj.f spbdphy.f spbh12.f spbjh.f spbphj.f spbphy.f \
-                            spbpsj.f spbpsy.f swavelet.f taper.f transfs2t.f
+                            spbpsj.f spbpsy.f swavelet.f taper.f transfs2t.f cbanddpasss.f cbutterworth.f \
+							qpsprop1.f qpspropg1.f legendre.f
 clean-local:
 	-rm -f *.mod
