@@ -1,24 +1,30 @@
-      subroutine qpspropg(ypsv,ldeg,lyup,lylw)
+      subroutine qpspropg1(ypsv,lyup,lylw)
       use qpalloc
       implicit none
 c
 c     calculation of speroidal response (with gravity)
 c     ypsv(6,4): solution vector (complex)
 c
-      integer*4 ldeg,lyup,lylw
+      integer*4 lyup,lylw
       complex*16 ypsv(6,4)
 c
 c     work space
 c
-      integer*4 i,j,j0,istp,ly,lyswap,ily,nly,key
+      integer*4 i,j,j0,istp,ly,lyswap,ily,nly,ldeg,key
       real*8 y4max,rr1,rr2,dlnr,h,f
       complex*16 cdet,alf,bet,cyabs,cyswap,ca,cb
-      complex*16 y0(6,3),c(2)
+      complex*16 y0(6,3),c(2),yc(6,3)
       complex*16 yup(6,3),ylw(6,3),yupc(4,2),ylwc(4,2)
       complex*16 coef6(6,6),b6(6,4),coef4(4,4),b4(4,2)
+      complex*16 coef7(7,7),b7(7,4),coef5(5,5),b5(5,2)
+      logical*2 comsys
       external qpdifmatl,qpdifmats
 c
       if(lylwa.gt.lylw)return
+c
+      ldeg=1
+c
+      comsys=lyup.eq.1.and.lyr.gt.1
 c
       f=dreal(comi)/PI2
 c
@@ -39,10 +45,6 @@ c
 c
           yupc(1,2)=(1.d0,0.d0)
           yupc(3,2)=cgrup(lyup)/crrup(lyup)
-c
-          if(ldeg.eq.1)then
-            yupc(4,2)=(3.d0,0.d0)*yupc(3,2)
-          endif
         else
           call qpstart4g(ldeg,lyup,2,yupc)
         endif
@@ -61,6 +63,22 @@ c
             y0(3,j)=yupc(2,j)
             y0(5,j)=yupc(3,j)
             y0(6,j)=yupc(4,j)
+          enddo
+        endif
+        if(comsys)then
+          do j=1,3
+            do i=1,6
+              yc(i,j)=(0.d0,0.d0)
+            enddo
+          enddo
+          do j=1,2
+            yc(1,j)=yupc(1,j)
+            yc(2,j)=croup(lyup)*crrup(lyup)**2
+     &             *(yupc(1,j)*cgrup(lyup)/crrup(lyup)
+     &             -comi2*yupc(2,j)-yupc(3,j))
+            yc(3,j)=yupc(2,j)
+            yc(5,j)=yupc(3,j)
+            yc(6,j)=yupc(4,j)
           enddo
         endif
       endif
@@ -90,6 +108,12 @@ c
                 y0(i,1)=y0(i,1)*comi2
               enddo
             endif
+            if(comsys)then
+              do i=1,6
+                yc(i,2)=yc(i,1)*cb-yc(i,2)*ca
+                yc(i,1)=yc(i,1)*comi2
+              enddo
+            endif
           else
             do i=1,4
               yupc(i,1)=yupc(i,1)*cb-yupc(i,2)*ca
@@ -105,6 +129,12 @@ c
               do i=1,6
                 y0(i,1)=y0(i,1)*cb-y0(i,2)*ca
                 y0(i,2)=y0(i,2)*comi2
+              enddo
+            endif
+            if(comsys)then
+              do i=1,6
+                yc(i,1)=yc(i,1)*cb-yc(i,2)*ca
+                yc(i,2)=yc(i,2)*comi2
               enddo
             endif
           endif
@@ -131,6 +161,11 @@ c
               y0(i,1)=y0(i,1)*cyabs
             enddo
           endif
+          if(comsys)then
+            do i=1,6
+              yc(i,1)=yc(i,1)*cyabs
+            enddo
+          endif
 c
           alf=(0.d0,0.d0)
           do i=1,4
@@ -142,6 +177,11 @@ c
           if(ly.ge.lyr)then
             do i=1,6
               y0(i,2)=y0(i,2)-alf*y0(i,1)
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,2)=yc(i,2)-alf*yc(i,1)
             enddo
           endif
 c
@@ -156,6 +196,11 @@ c
           if(ly.ge.lyr)then
             do i=1,6
               y0(i,2)=y0(i,2)*cyabs
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,2)=yc(i,2)*cyabs
             enddo
           endif
 c
@@ -210,13 +255,11 @@ c
             yup(1,1)=(1.d0,0.d0)
             yup(3,2)=(1.d0,0.d0)
             yup(5,3)=(1.d0,0.d0)
-            if(ldeg.eq.1)then
-              yup(6,3)=(3.d0,0.d0)*yup(5,3)
-            endif
           else
             call qpstart6g(ldeg,lyup,2,yup)
           endif
           if(lyr.eq.lyup)call cmemcpy(yup,y0,18)
+          if(comsys.and.lyup.eq.lyob)call cmemcpy(yup,yc,18)
         endif
       endif
 c
@@ -246,6 +289,11 @@ c
               y0(i,1)=y0(i,1)*cyabs
             enddo
           endif
+          if(comsys)then
+            do i=1,6
+              yc(i,1)=yc(i,1)*cyabs
+            enddo
+          endif
 c
           alf=(0.d0,0.d0)
           do i=1,6
@@ -257,6 +305,11 @@ c
           if(ly.ge.lyr)then
             do i=1,6
               y0(i,2)=y0(i,2)-alf*y0(i,1)
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,2)=yc(i,2)-alf*yc(i,1)
             enddo
           endif
 c
@@ -271,6 +324,11 @@ c
           if(ly.ge.lyr)then
             do i=1,6
               y0(i,2)=y0(i,2)*cyabs
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,2)=yc(i,2)*cyabs
             enddo
           endif
 c
@@ -288,6 +346,11 @@ c
               y0(i,3)=y0(i,3)-alf*y0(i,1)-bet*y0(i,2)
             enddo
           endif
+          if(comsys)then
+            do i=1,6
+              yc(i,3)=yc(i,3)-alf*yc(i,1)-bet*yc(i,2)
+            enddo
+          endif
 c
           cyabs=(0.d0,0.d0)
           do i=1,6
@@ -300,6 +363,11 @@ c
           if(ly.ge.lyr)then
             do i=1,6
               y0(i,3)=y0(i,3)*cyabs
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,3)=yc(i,3)*cyabs
             enddo
           endif
 c
@@ -347,6 +415,21 @@ c
               y0(i,3)=(0.d0,0.d0)
             enddo
           endif
+          if(comsys)then
+            do i=1,6
+              cyswap=yc(i,j0)
+              yc(i,j0)=yc(i,3)
+              yc(i,3)=cyswap
+            enddo
+            do j=1,2
+              do i=1,6
+                yc(i,j)=yup(4,3)*yc(i,j)-yup(4,j)*yc(i,3)
+              enddo
+            enddo
+            do i=1,6
+              yc(i,3)=(0.d0,0.d0)
+            enddo
+          endif
 c
 c         y2 = Ut
 c
@@ -366,6 +449,12 @@ c
             do i=1,6
               y0(i,1)=c(2)*y0(i,1)-c(1)*y0(i,2)
               y0(i,2)=comi2*y0(i,2)
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,1)=c(2)*yc(i,1)-c(1)*yc(i,2)
+              yc(i,2)=comi2*yc(i,2)
             enddo
           endif
         else if(lyup.lt.lycc)then
@@ -409,6 +498,11 @@ c
               y0(i,1)=y0(i,1)*cyabs
             enddo
           endif
+          if(comsys)then
+            do i=1,6
+              yc(i,1)=yc(i,1)*cyabs
+            enddo
+          endif
 c
           alf=(0.d0,0.d0)
           do i=1,4
@@ -420,6 +514,11 @@ c
           if(ly.ge.lyr)then
             do i=1,6
               y0(i,2)=y0(i,2)-alf*y0(i,1)
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,2)=yc(i,2)-alf*yc(i,1)
             enddo
           endif
 c
@@ -434,6 +533,11 @@ c
           if(ly.ge.lyr)then
             do i=1,6
               y0(i,2)=y0(i,2)*cyabs
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,2)=yc(i,2)*cyabs
             enddo
           endif
 c
@@ -510,6 +614,11 @@ c
               y0(i,1)=y0(i,1)*cyabs
             enddo
           endif
+          if(comsys)then
+            do i=1,6
+              yc(i,1)=yc(i,1)*cyabs
+            enddo
+          endif
 c
           alf=(0.d0,0.d0)
           do i=1,6
@@ -521,6 +630,11 @@ c
           if(ly.ge.lyr)then
             do i=1,6
               y0(i,2)=y0(i,2)-alf*y0(i,1)
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,2)=yc(i,2)-alf*yc(i,1)
             enddo
           endif
 c
@@ -535,6 +649,11 @@ c
           if(ly.ge.lyr)then
             do i=1,6
               y0(i,2)=y0(i,2)*cyabs
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,2)=yc(i,2)*cyabs
             enddo
           endif
 c
@@ -552,6 +671,11 @@ c
               y0(i,3)=y0(i,3)-alf*y0(i,1)-bet*y0(i,2)
             enddo
           endif
+          if(comsys)then
+            do i=1,6
+              yc(i,3)=yc(i,3)-alf*yc(i,1)-bet*yc(i,2)
+            enddo
+          endif
 c
           cyabs=(0.d0,0.d0)
           do i=1,6
@@ -564,6 +688,11 @@ c
           if(ly.ge.lyr)then
             do i=1,6
               y0(i,3)=y0(i,3)*cyabs
+            enddo
+          endif
+          if(comsys)then
+            do i=1,6
+              yc(i,3)=yc(i,3)*cyabs
             enddo
           endif
 c
@@ -597,6 +726,16 @@ c
 c        yup(5,j)=yup(5,j)
         yup(6,j)=yup(6,j)/crrup(lys)
       enddo
+      if(comsys)then
+        do j=1,3
+          yc(1,j)=yc(1,j)/crrup(lyup)
+          yc(2,j)=yc(2,j)/crrup(lyup)**2
+          yc(3,j)=yc(3,j)/crrup(lyup)
+          yc(4,j)=yc(4,j)/crrup(lyup)**2
+c         yc(5,j)=yc(5,j)
+          yc(6,j)=yc(6,j)/crrup(lyup)
+        enddo
+      endif
 c
 c===============================================================================
 c
@@ -1235,95 +1374,237 @@ c
 c        y0(5,j)=y0(5,j)
         y0(6,j)=y0(6,j)/crrup(lyr)
       enddo
+      if(lyr.eq.1)then
+        comsys=.true.
+        do j=1,3
+          do i=1,6
+            yc(i,j)=y0(i,j)
+          enddo
+        enddo
+      endif
 c
 c===============================================================================
 c     source function
 c===============================================================================
 c
-      if(vsup(lys).le.0.d0)then
-        do istp=1,2
-          do i=1,4
-            b4(i,istp)=(0.d0,0.d0)
-          enddo
-          b4(istp,istp)=(1.d0,0.d0)
-        enddo
-        do j=1,2
-          do i=1,2
-            coef4(i,j)=yup(i,j)
-            coef4(i,j+2)=-ylw(i,j)
-          enddo
-          do i=3,4
-            coef4(i,j)=yup(i+2,j)
-            coef4(i,j+2)=-ylw(i+2,j)
-          enddo
-        enddo
-        key=0
-        call cdsvd500(coef4,b4,4,2,0.d0,key)
-        if(key.eq.0)then
-          print *,' Warning in qpspropg: anormal exit from cdsvd500!'
-          return
-        endif
-        if(lyr.le.lys)then
+      if(comsys)then
+        if(vsup(lys).le.0.d0)then
           do istp=1,2
+            do i=1,5
+              b5(i,istp)=(0.d0,0.d0)
+            enddo
+            b5(istp,istp)=(1.d0,0.d0)
+          enddo
+          do i=1,5
+            do j=1,5
+              coef5(i,j)=(0.d0,0.d0)
+            enddo
+          enddo
+          do j=1,2
+            do i=1,2
+              coef5(i,j)=yup(i,j)
+              coef5(i,j+2)=-ylw(i,j)
+            enddo
+            do i=3,4
+              coef5(i,j)=yup(i+2,j)
+              coef5(i,j+2)=-ylw(i+2,j)
+            enddo
+          enddo
+          do j=1,2
+            coef5(5,j)=yc(5,j)
+          enddo
+          coef5(5,5)=-cgrup(1)
+c
+          key=0
+          call cdsvd500(coef4,b5,5,2,0.d0,key)
+          if(key.eq.0)then
+            print *,' Warning in qpspropg1: anormal exit from cdsvd500!'
+            return
+          endif
+          if(lyr.le.lys)then
+            do istp=1,2
+              do i=1,6
+                ypsv(i,istp)=(0.d0,0.d0)
+                do j=1,2
+                  ypsv(i,istp)=ypsv(i,istp)+b5(j,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          else
+            do istp=1,2
+              do i=1,6
+                ypsv(i,istp)=(0.d0,0.d0)
+                do j=1,2
+                  ypsv(i,istp)=ypsv(i,istp)+b5(j+2,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          endif
+c
+c         add rigid motion
+c
+          do istp=1,2
+            ypsv(1,istp)=ypsv(1,istp)+b5(5,istp)
+            ypsv(3,istp)=ypsv(3,istp)+b5(5,istp)
+            if(lyr.eq.1)then
+              ypsv(5,istp)=(0.d0,0.d0)
+            else
+              ypsv(5,istp)=ypsv(5,istp)-cgrup(lyr)*b5(5,istp)
+            endif
+          enddo
+c
+          do istp=3,4
             do i=1,6
               ypsv(i,istp)=(0.d0,0.d0)
-              do j=1,2
-                ypsv(i,istp)=ypsv(i,istp)+b4(j,istp)*y0(i,j)
-              enddo
             enddo
           enddo
         else
-          do istp=1,2
-            do i=1,6
-              ypsv(i,istp)=(0.d0,0.d0)
-              do j=1,2
-                ypsv(i,istp)=ypsv(i,istp)+b4(j+2,istp)*y0(i,j)
-              enddo
+          do istp=1,4
+            do i=1,7
+              b7(i,istp)=(0.d0,0.d0)
+            enddo
+            b7(istp,istp)=(1.d0,0.d0)
+          enddo
+          do i=1,7
+            do j=1,7
+              coef7(i,j)=(0.d0,0.d0)
             enddo
           enddo
-        endif
-        do istp=3,4
-          do i=1,6
-            ypsv(i,istp)=(0.d0,0.d0)
+          do j=1,3
+            do i=1,6
+              coef7(i,j)=yup(i,j)
+              coef7(i,j+3)=-ylw(i,j)
+            enddo
           enddo
-        enddo
+          do j=1,3
+            coef7(7,j)=yc(5,j)
+          enddo
+          coef7(7,7)=-cgrup(1)
+c
+          key=0
+          call cdsvd500(coef7,b7,7,4,0.d0,key)
+          if(key.eq.0)then
+            print *,' Warning in qpspropg1: anormal exit from cdsvd500!'
+            return
+          endif
+          if(lyr.le.lys)then
+            do istp=1,4
+              do i=1,6
+                ypsv(i,istp)=(0.d0,0.d0)
+                do j=1,3
+                  ypsv(i,istp)=ypsv(i,istp)+b7(j,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          else
+            do istp=1,4
+              do i=1,6
+                ypsv(i,istp)=(0.d0,0.d0)
+                do j=1,3
+                  ypsv(i,istp)=ypsv(i,istp)+b7(j+3,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          endif
+c
+c         add rigid motion
+c
+          do istp=1,4
+            ypsv(1,istp)=ypsv(1,istp)+b7(7,istp)
+            ypsv(3,istp)=ypsv(3,istp)+b7(7,istp)
+            if(lyr.eq.1)then
+              ypsv(5,istp)=(0.d0,0.d0)
+            else
+              ypsv(5,istp)=ypsv(5,istp)-cgrup(lyr)*b7(7,istp)
+            endif
+          enddo
+        endif
       else
-        do istp=1,4
-          do i=1,6
-            b6(i,istp)=(0.d0,0.d0)
+        if(vsup(lys).le.0.d0)then
+          do istp=1,2
+            do i=1,4
+              b4(i,istp)=(0.d0,0.d0)
+            enddo
+            b4(istp,istp)=(1.d0,0.d0)
           enddo
-          b6(istp,istp)=(1.d0,0.d0)
-        enddo
-        do j=1,3
-          do i=1,6
-            coef6(i,j)=yup(i,j)
-            coef6(i,j+3)=-ylw(i,j)
+          do j=1,2
+            do i=1,2
+              coef4(i,j)=yup(i,j)
+              coef4(i,j+2)=-ylw(i,j)
+            enddo
+            do i=3,4
+              coef4(i,j)=yup(i+2,j)
+              coef4(i,j+2)=-ylw(i+2,j)
+            enddo
           enddo
-        enddo
-        key=0
-        call cdsvd500(coef6,b6,6,4,0.d0,key)
-        if(key.eq.0)then
-          print *,' Warning in qpspropg: anormal exit from cdsvd500!'
-          return
-        endif
-        if(lyr.le.lys)then
-          do istp=1,4
+          key=0
+          call cdsvd500(coef4,b4,4,2,0.d0,key)
+          if(key.eq.0)then
+            print *,' Warning in qpspropg1: anormal exit from cdsvd500!'
+            return
+          endif
+          if(lyr.le.lys)then
+            do istp=1,2
+              do i=1,6
+                ypsv(i,istp)=(0.d0,0.d0)
+                do j=1,2
+                  ypsv(i,istp)=ypsv(i,istp)+b4(j,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          else
+            do istp=1,2
+              do i=1,6
+                ypsv(i,istp)=(0.d0,0.d0)
+                do j=1,2
+                  ypsv(i,istp)=ypsv(i,istp)+b4(j+2,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          endif
+          do istp=3,4
             do i=1,6
               ypsv(i,istp)=(0.d0,0.d0)
-              do j=1,3
-                ypsv(i,istp)=ypsv(i,istp)+b6(j,istp)*y0(i,j)
-              enddo
             enddo
           enddo
         else
           do istp=1,4
             do i=1,6
-              ypsv(i,istp)=(0.d0,0.d0)
-              do j=1,3
-                ypsv(i,istp)=ypsv(i,istp)+b6(j+3,istp)*y0(i,j)
-              enddo
+              b6(i,istp)=(0.d0,0.d0)
+            enddo
+            b6(istp,istp)=(1.d0,0.d0)
+          enddo
+          do j=1,3
+            do i=1,6
+              coef6(i,j)=yup(i,j)
+              coef6(i,j+3)=-ylw(i,j)
             enddo
           enddo
+          key=0
+          call cdsvd500(coef6,b6,6,4,0.d0,key)
+          if(key.eq.0)then
+            print *,' Warning in qpspropg1: anormal exit from cdsvd500!'
+            return
+          endif
+          if(lyr.le.lys)then
+            do istp=1,4
+              do i=1,6
+                ypsv(i,istp)=(0.d0,0.d0)
+                do j=1,3
+                  ypsv(i,istp)=ypsv(i,istp)+b6(j,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          else
+            do istp=1,4
+              do i=1,6
+                ypsv(i,istp)=(0.d0,0.d0)
+                do j=1,3
+                  ypsv(i,istp)=ypsv(i,istp)+b6(j+3,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          endif
         endif
       endif
 c
@@ -1962,88 +2243,217 @@ c===============================================================================
 c     source function
 c===============================================================================
 c
-      if(vsup(lys).le.0.d0)then
-        do istp=1,2
-          do i=1,4
-            b4(i,istp)=(0.d0,0.d0)
-          enddo
-          b4(istp,istp)=(1.d0,0.d0)
-        enddo
-        do j=1,2
-          do i=1,2
-            coef4(i,j)=yup(i,j)
-            coef4(i,j+2)=-ylw(i,j)
-          enddo
-          do i=3,4
-            coef4(i,j)=yup(i+2,j)
-            coef4(i,j+2)=-ylw(i+2,j)
-          enddo
-        enddo
-        key=0
-        call cdsvd500(coef4,b4,4,2,0.d0,key)
-        if(key.eq.0)then
-          print *,' Warning in qpspropg: anormal exit from cdsvd500!'
-          return
-        endif
-        if(lyr.le.lys)then
+      if(comsys)then
+        if(vsup(lys).le.0.d0)then
           do istp=1,2
-            do i=1,6
-              do j=1,2
-                ypsv(i,istp)=ypsv(i,istp)-b4(j,istp)*y0(i,j)
+            do i=1,5
+              b5(i,istp)=(0.d0,0.d0)
+            enddo
+            b5(istp,istp)=(1.d0,0.d0)
+          enddo
+          do i=1,5
+            do j=1,5
+              coef5(i,j)=(0.d0,0.d0)
+            enddo
+          enddo
+          do j=1,2
+            do i=1,2
+              coef5(i,j)=yup(i,j)
+              coef5(i,j+2)=-ylw(i,j)
+            enddo
+            do i=3,4
+              coef5(i,j)=yup(i+2,j)
+              coef5(i,j+2)=-ylw(i+2,j)
+            enddo
+          enddo
+          do j=1,2
+            coef5(5,j)=yc(5,j)
+          enddo
+          coef5(5,5)=-cgrup(1)
+c
+          key=0
+          call cdsvd500(coef4,b5,5,2,0.d0,key)
+          if(key.eq.0)then
+            print *,' Warning in qpspropg1: anormal exit from cdsvd500!'
+            return
+          endif
+          if(lyr.le.lys)then
+            do istp=1,2
+              do i=1,6
+                do j=1,2
+                  ypsv(i,istp)=ypsv(i,istp)-b5(j,istp)*y0(i,j)
+                enddo
               enddo
+            enddo
+          else
+            do istp=1,2
+              do i=1,6
+                do j=1,2
+                  ypsv(i,istp)=ypsv(i,istp)-b5(j+2,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          endif
+c
+c         add rigid motion
+c
+          do istp=1,2
+            ypsv(1,istp)=ypsv(1,istp)-b5(5,istp)
+            ypsv(3,istp)=ypsv(3,istp)-b5(5,istp)
+            if(lyr.eq.1)then
+              ypsv(5,istp)=(0.d0,0.d0)
+            else
+              ypsv(5,istp)=ypsv(5,istp)+cgrup(lyr)*b5(5,istp)
+            endif
+          enddo
+c
+          do istp=3,4
+            do i=1,6
+              ypsv(i,istp)=(0.d0,0.d0)
             enddo
           enddo
         else
-          do istp=1,2
-            do i=1,6
-              do j=1,2
-                ypsv(i,istp)=ypsv(i,istp)-b4(j+2,istp)*y0(i,j)
-              enddo
+          do istp=1,4
+            do i=1,7
+              b7(i,istp)=(0.d0,0.d0)
+            enddo
+            b7(istp,istp)=(1.d0,0.d0)
+          enddo
+          do i=1,7
+            do j=1,7
+              coef7(i,j)=(0.d0,0.d0)
             enddo
           enddo
-        endif
-        do istp=3,4
-          do i=1,6
-            ypsv(i,istp)=(0.d0,0.d0)
+          do j=1,3
+            do i=1,6
+              coef7(i,j)=yup(i,j)
+              coef7(i,j+3)=-ylw(i,j)
+            enddo
           enddo
-        enddo
+          do j=1,3
+            coef7(7,j)=yc(5,j)
+          enddo
+          coef7(7,7)=-cgrup(1)
+c
+          key=0
+          call cdsvd500(coef7,b7,7,4,0.d0,key)
+          if(key.eq.0)then
+            print *,' Warning in qpspropg1: anormal exit from cdsvd500!'
+            return
+          endif
+          if(lyr.le.lys)then
+            do istp=1,4
+              do i=1,6
+                do j=1,3
+                  ypsv(i,istp)=ypsv(i,istp)-b7(j,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          else
+            do istp=1,4
+              do i=1,6
+                do j=1,3
+                  ypsv(i,istp)=ypsv(i,istp)-b7(j+3,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          endif
+c
+c         add rigid motion
+c
+          do istp=1,4
+            ypsv(1,istp)=ypsv(1,istp)-b7(7,istp)
+            ypsv(3,istp)=ypsv(3,istp)-b7(7,istp)
+            if(lyr.eq.1)then
+              ypsv(5,istp)=(0.d0,0.d0)
+            else
+              ypsv(5,istp)=ypsv(5,istp)+cgrup(lyr)*b7(7,istp)
+            endif
+          enddo
+        endif
       else
-        do istp=1,4
-          do i=1,6
-            b6(i,istp)=(0.d0,0.d0)
+        if(vsup(lys).le.0.d0)then
+          do istp=1,2
+            do i=1,4
+              b4(i,istp)=(0.d0,0.d0)
+            enddo
+            b4(istp,istp)=(1.d0,0.d0)
           enddo
-          b6(istp,istp)=(1.d0,0.d0)
-        enddo
-        do j=1,3
-          do i=1,6
-            coef6(i,j)=yup(i,j)
-            coef6(i,j+3)=-ylw(i,j)
+          do j=1,2
+            do i=1,2
+              coef4(i,j)=yup(i,j)
+              coef4(i,j+2)=-ylw(i,j)
+            enddo
+            do i=3,4
+              coef4(i,j)=yup(i+2,j)
+              coef4(i,j+2)=-ylw(i+2,j)
+            enddo
           enddo
-        enddo
-        key=0
-        call cdsvd500(coef6,b6,6,4,0.d0,key)
-        if(key.eq.0)then
-          print *,' Warning in qpspropg: anormal exit from cdsvd500!'
-          return
-        endif
-        if(lyr.le.lys)then
-          do istp=1,4
-            do i=1,6
-              do j=1,3
-                ypsv(i,istp)=ypsv(i,istp)-b6(j,istp)*y0(i,j)
+          key=0
+          call cdsvd500(coef4,b4,4,2,0.d0,key)
+          if(key.eq.0)then
+            print *,' Warning in qpspropg1: anormal exit from cdsvd500!'
+            return
+          endif
+          if(lyr.le.lys)then
+            do istp=1,2
+              do i=1,6
+                do j=1,2
+                  ypsv(i,istp)=ypsv(i,istp)-b4(j,istp)*y0(i,j)
+                enddo
               enddo
+            enddo
+          else
+            do istp=1,2
+              do i=1,6
+                do j=1,2
+                  ypsv(i,istp)=ypsv(i,istp)-b4(j+2,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          endif
+          do istp=3,4
+            do i=1,6
+              ypsv(i,istp)=(0.d0,0.d0)
             enddo
           enddo
         else
           do istp=1,4
             do i=1,6
-              do j=1,3
-                ypsv(i,istp)=ypsv(i,istp)-b6(j+3,istp)*y0(i,j)
-              enddo
+              b6(i,istp)=(0.d0,0.d0)
+            enddo
+            b6(istp,istp)=(1.d0,0.d0)
+          enddo
+          do j=1,3
+            do i=1,6
+              coef6(i,j)=yup(i,j)
+              coef6(i,j+3)=-ylw(i,j)
             enddo
           enddo
+          key=0
+          call cdsvd500(coef6,b6,6,4,0.d0,key)
+          if(key.eq.0)then
+            print *,' Warning in qpspropg1: anormal exit from cdsvd500!'
+            return
+          endif
+          if(lyr.le.lys)then
+            do istp=1,4
+              do i=1,6
+                do j=1,3
+                  ypsv(i,istp)=ypsv(i,istp)-b6(j,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          else
+            do istp=1,4
+              do i=1,6
+                do j=1,3
+                  ypsv(i,istp)=ypsv(i,istp)-b6(j+3,istp)*y0(i,j)
+                enddo
+              enddo
+            enddo
+          endif
         endif
       endif
-c
       return
       end

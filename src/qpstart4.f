@@ -19,6 +19,9 @@ c
      &     (1.d0,0.d0),(2.d0,0.d0),(3.d0,0.d0),(4.d0,0.d0)/
 c
       cldeg=dcmplx(dble(ldeg),0.d0)
+      cgrdr=cgrup(ly)/crrup(ly)
+      c2lp1=c2*cldeg+c1
+c
       if(dreal(comi).le.0.d0)then
 c
 c       imcompressible fluid in the quasi-static case
@@ -30,10 +33,8 @@ c
       else
         cllm1=cldeg*(cldeg-c1)
         cllp1=cldeg*(cldeg+c1)
-        c2lp1=c2*cldeg+c1
         c2lp3=c2*cldeg+c3
         c22lp3=c2*(c2*cldeg+c3)
-        cgrdr=cgrup(ly)/crrup(ly)
 c
         ca2=(comi2+cga(ly)+cgrdr)/cvp(ly)**2
         cb2=comi2/cvs(ly)**2

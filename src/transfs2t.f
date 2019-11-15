@@ -1,9 +1,9 @@
-      subroutine transfs2t(nf,nr,df,t0,dt,fi,shift,cy0,cy,cswap,dswap,
-     &                     iof,ntcutout,rname,y0,y,outfile)
+      subroutine transfs2t(nf,nr,df,t0,dt,dtout,fi,shift,cy0,cy,
+     &                     cswap,dswap,iof,ntcutout,rname,y0,y,outfile)
       implicit none
 c
       integer*4 nf,nr,iof,ntcutout
-      real*8 df,t0,dt,fi
+      real*8 df,t0,dt,dtout,fi
       real*8 shift(nr),dswap(4*nf),y0(nr),y(nr)
       complex*16 cy0(nf,nr),cy(nf,nr),cswap(2*nf)
       character*10 rname(nr)
@@ -12,8 +12,8 @@ c
       real*8 PI2
       data PI2/6.28318530717959d0/
 c
-      integer*4 ir,lf,mf,it
-      real*8 t,sr,si
+      integer*4 ir,lf,mf,it,itout
+      real*8 t,sr,si,a,b
       complex*16 s
 c
       do ir=1,nr
@@ -32,11 +32,33 @@ c       convention for Fourier transform:
 c       f(t)=\int F(f) exp(i2\pi f t) df
 c
         call four1w(cswap,dswap,2*nf,+1)
-        do lf=1,nf
-          t=dble(2*lf-2)*dt
-          sr=dreal(cswap(2*lf-1))*dexp(-PI2*fi*t)*df
-          t=dble(2*lf-1)*dt
-          si=dreal(cswap(2*lf  ))*dexp(-PI2*fi*t)*df
+c
+        do lf=1,2*nf
+          t=dble(lf-1)*dt
+          cswap(lf)=cswap(lf)*dcmplx(dexp(-PI2*fi*t)*df,0.d0)
+        enddo
+c
+        do lf=1,(ntcutout+1)/2
+          t=dble(2*lf-1)*dtout
+          it=1+idint(t/dt)
+          if(it.ge.2*nf)then
+            sr=dreal(cswap(2*nf))
+          else
+            b=dmod(t,dt)/dt
+            a=1.d0-b
+            sr=a*dreal(cswap(it))+b*dreal(cswap(it+1))
+          endif
+c
+          t=dble(2*lf)*dtout
+          it=1+idint(t/dt)
+          if(it.ge.2*nf)then
+            si=dreal(cswap(2*nf))
+          else
+            b=dmod(t,dt)/dt
+            a=1.d0-b
+            si=a*dreal(cswap(it))+b*dreal(cswap(it+1))
+          endif
+c
           cy(lf,ir)=dcmplx(sr,si)
         enddo
       enddo
@@ -52,7 +74,7 @@ c
           y(ir)=0.d0
         enddo
         do it=1,ntcutout
-          t=t0+dble(it-1)*dt
+          t=t0+dble(it-1)*dtout
           write(20,'(f12.3,$)')t
           do ir=1,nr-1
             write(20,'(E16.8,$)')y(ir)
@@ -61,17 +83,17 @@ c
           lf=(it+1)/2
           if(it.gt.2*(it/2))then
             do ir=1,nr
-              y(ir)=y(ir)+dreal(cy(lf,ir))*dt
+              y(ir)=y(ir)+dreal(cy(lf,ir))*dtout
             enddo
           else
             do ir=1,nr
-              y(ir)=y(ir)+dimag(cy(lf,ir))*dt
+              y(ir)=y(ir)+dimag(cy(lf,ir))*dtout
             enddo
           endif
         enddo
       else if(iof.eq.1)then
         do it=1,ntcutout
-          t=t0+dble(it-1)*dt
+          t=t0+dble(it-1)*dtout
           write(20,'(f12.3,$)')t
           lf=(it+1)/2
           if(it.gt.2*(it/2))then
@@ -93,7 +115,7 @@ c
           y0(ir)=dreal(cy(1,ir))
         enddo
         do it=1,ntcutout
-          t=t0+dble(it-1)*dt
+          t=t0+dble(it-1)*dtout
           lf=(it+1)/2
           if(it.gt.2*(it/2))then
             do ir=1,nr
@@ -106,9 +128,9 @@ c
           endif
           write(20,'(f12.3,$)')t
           do ir=1,nr-1
-            write(20,'(E16.8,$)')(y(ir)-y0(ir))/dt
+            write(20,'(E16.8,$)')(y(ir)-y0(ir))/dtout
           enddo
-          write(20,'(E16.8)')(y(nr)-y0(nr))/dt
+          write(20,'(E16.8)')(y(nr)-y0(nr))/dtout
           do ir=1,nr
             y0(ir)=y(ir)
           enddo

@@ -4,9 +4,9 @@
       integer*4 ierr
 c
       integer*4 i,j,k,id,is,ir,ig,nd,nt0,nf0,ntcut0,nfcut0,ishift
-      integer*4 lf,lf1,istp,ldeg,ldegf
+      integer*4 lf,lf1,istp,ldeg,ldegf,ldeg0
       integer*4 istat,ldegup,ldeglw,ldegneed
-      real*8 depsarc,dis0,anorm
+      real*8 depsarc,dis0,anorm,slwcut
       real*8 f,dt0,df0,rn,re,azi,bazi,bazi0
       complex*16 cll1,cp0,cp1,cp2,wavelet,muer,lamr,ksir,rrr,srt,srp
       complex*16 cfac,ca,cb,dur,dut,dup,eii,dgr,dgt,dgp
@@ -120,10 +120,9 @@ c
         tap(ldeg)=1.d0
       enddo
 c
-      rrr=crrup(lyr)
+      ldeg0=10+ndmax
 c
-      fullwave=ldegmin.gt.10*(1+ndmax)
-     &        .and.(nlpf.le.0.or.nlpf.gt.0.and.f1corner.le.0.d0)
+      rrr=crrup(lyr)
 c
       do is=1,ns
         depsarc=PI2/dble(ldegmax)+dmax1(minpath,deps(is))/rearth
@@ -144,6 +143,7 @@ c
           endif
 c
           ssd(is,ir)=dcmplx(dsin(dis(is,ir)),0.d0)
+          csd(is,ir)=dcmplx(dcos(dis(is,ir)),0.d0)
           ssf(is,ir)=dcmplx(2.d0*dsin(0.5d0*dis(is,ir))**2,0.d0)
 c
 c         azi = receiver azimuth (from south to east)
@@ -196,7 +196,7 @@ c
 c     initiation
 c
       do is=1,ns
-        call swavelet(trss(is),df,nf,wvf(1,is))
+        call swavelet(trss(is),df,fi,nf,wvf(1,is))
       enddo
 c
       do lf=1,nf
@@ -208,6 +208,7 @@ c
           ge(lf,ir)=(0.d0,0.d0)
           gn(lf,ir)=(0.d0,0.d0)
           gz(lf,ir)=(0.d0,0.d0)
+          gm(lf,ir)=(0.d0,0.d0)
 c
           roe(lf,ir)=(0.d0,0.d0)
           ron(lf,ir)=(0.d0,0.d0)
@@ -283,6 +284,27 @@ c
           stop
         endif
 c
+        do istp=1,6
+          do ldeg=0,ldegmax
+            ul0(ldeg,istp)=(0.d0,0.d0)
+            vl0(ldeg,istp)=(0.d0,0.d0)
+            wl0(ldeg,istp)=(0.d0,0.d0)
+            el0(ldeg,istp)=(0.d0,0.d0)
+            fl0(ldeg,istp)=(0.d0,0.d0)
+            gl0(ldeg,istp)=(0.d0,0.d0)
+            pl0(ldeg,istp)=(0.d0,0.d0)
+            ql0(ldeg,istp)=(0.d0,0.d0)
+          enddo
+        enddo
+c
+        lys=lygrn(ig)
+        if(vsup(lys).gt.0.d0)then
+          slwcut=1.d0/vsup(lys)
+        else
+          slwcut=1.d0/vpup(lys)
+        endif
+        fullwave=slwlwcut.le.0.d0.and.slwupcut.ge.dmin1(slwmax,slwcut)
+c
         do lf=1,nfcut
           f=dble(lf-1)*df
 c
@@ -299,13 +321,6 @@ c
           read(26)ldegf
           read(27)ldegf
           read(28)ldegf
-c
-          do istp=1,3
-            do ldeg=0,ldegf
-              wl0(ldeg,istp)=(0.d0,0.d0)
-              gl0(ldeg,istp)=(0.d0,0.d0)
-            enddo
-          enddo
 c
           read(21)((ul0(ldeg,istp),ldeg=0,ldegf),istp=1,6)              !Y1
           read(22)((vl0(ldeg,istp),ldeg=0,ldegf),istp=1,6)              !Y3
@@ -327,7 +342,7 @@ c
                 ldegtap(1,is,ir)=0
               else
                 ldegtap(4,is,ir)=min0(ldegf-idr(is,ir)-1,
-     &                           idnint(rearth*PI2*f*slwupcut))
+     &                        ldeg0+idnint(rearth*PI2*f*slwupcut))
                 ldegtap(3,is,ir)=ldegtap(4,is,ir)*4/5
                 ldegtap(4,is,ir)=min0(ldegf-idr(is,ir)-1,
      &                                10+ldegtap(4,is,ir))
@@ -432,18 +447,16 @@ c             ertlm(ldeg,istp,0) s. below
      &                          -uplm(ldeg,istp,0))/rrr
 c
               if(cdabs(muer).gt.0.d0)then
-                etrlm(ldeg,istp,0)=ca*(fl0(ldeg-1,istp)/muer            !m=1,  1/sin(t)
-     &                        +(vl0(ldeg-1,istp)-ul0(ldeg-1,istp))/rrr)
-     &                         -cb*(fl0(ldeg+1,istp)/muer
-     &                        +(vl0(ldeg+1,istp)-ul0(ldeg+1,istp))/rrr)
-     &                        +(wl0(ldeg,istp)/rrr+gl0(ldeg,istp)/muer)
-                srt=ca*fl0(ldeg-1,istp)
-     &             -cb*fl0(ldeg+1,istp)+gl0(ldeg,istp)
-                ertlm(ldeg,istp,0)=srt/muer-etrlm(ldeg,istp,0)          !m=1,  1/sin(t)
+                srt=(ca*fl0(ldeg-1,istp)
+     &              -cb*fl0(ldeg+1,istp)+gl0(ldeg,istp))/muer
+                etrlm(ldeg,istp,0)=srt+utlm(ldeg,istp,0)/rrr            !m=1,  1/sin(t)
+     &             -(ca*ul0(ldeg-1,istp)-cb*ul0(ldeg+1,istp))/rrr
+                ertlm(ldeg,istp,0)=srt-etrlm(ldeg,istp,0)               !m=1,  1/sin(t)
               else
-                etrlm(ldeg,istp,0)=ca*(ul0(ldeg-1,istp)                 !m=1,  1/sin(t)
-     &                                -vl0(ldeg-1,istp))/rrr
-     &                      -cb*(ul0(ldeg+1,istp)-vl0(ldeg+1,istp))/rrr
+                etrlm(ldeg,istp,0)=(ca*(ul0(ldeg-1,istp)                 !m=1,  1/sin(t)
+     &                                 -vl0(ldeg-1,istp))
+     &                             -cb*(ul0(ldeg+1,istp)
+     &                                 -vl0(ldeg+1,istp)))/rrr
                 ertlm(ldeg,istp,0)=etrlm(ldeg,istp,0)                   !m=1,  1/sin(t)
               endif
 c
@@ -457,9 +470,9 @@ c
               etpblm(ldeg,istp,0)=-wl0(ldeg,istp)/rrr                   !m=2,  cos(t)/sin(t)
 c
               if(cdabs(muer).gt.0.d0)then
-                srp=-ca*gl0(ldeg-1,istp)+cb*gl0(ldeg+1,istp)
-     &             -fl0(ldeg,istp)
-                eprlm(ldeg,istp,0)=srp/muer-erplm(ldeg,istp,0)          !m=1,  1/sin(t)
+                srp=(cb*gl0(ldeg+1,istp)-ca*gl0(ldeg-1,istp)
+     &             -fl0(ldeg,istp))/muer
+                eprlm(ldeg,istp,0)=srp-erplm(ldeg,istp,0)               !m=1,  1/sin(t)
               else
                 eprlm(ldeg,istp,0)=erplm(ldeg,istp,0)                   !m=1,  1/sin(t)
               endif
@@ -528,7 +541,7 @@ c
             ept0lm(ldeg,6,0)=-dcmplx(dble(ldeg+2),0.d0)                 !m=2,  cos(t)/sin^2(t)
      &                      *uplm(ldeg,6,0)/rrr
             eptalm(ldeg,6,0)=dcmplx(dble(ldeg-2),0.d0)                  !m=2,  1/sin^2(t)
-     &                      *uplm(ldeg-1,2,0)/rrr
+     &                      *uplm(ldeg-1,6,0)/rrr
 c
             epp0lm(ldeg,6,0)=ul0(ldeg,6)/rrr                            !m=2,  1
             eppalm(ldeg,6,0)=utlm(ldeg,6,0)/rrr                         !m=2,  cos(t)/sin^2(t)
@@ -817,7 +830,7 @@ c
 c
               call taper(ldegtap(1,is,ir),ldegtap(4,is,ir),tap(0))
 c
-              call qplegendre(ldegtap(4,is,ir),dis(is,ir))
+              call legendre(dis(is,ir),plm,ldegtap(4,is,ir),ldegmax)
 c
               do ldeg=ldegtap(1,is,ir),ldegtap(4,is,ir)
 c
@@ -913,7 +926,7 @@ c
      &              +expl(is)*etrlm(ldeg,2,id)*cp1*ssd(is,ir)
      &              +clvd(is)*etrlm(ldeg,3,id)*cp1*ssd(is,ir)
      &              +(sf1(is)*csa(is,ir)+sf2(is)*ssa(is,ir))
-     &               *etrlm(ldeg,5,id)*cp1
+     &               *etrlm(ldeg,4,id)*cp1
      &              +(ds31(is)*csa(is,ir)+ds23(is)*ssa(is,ir))
      &               *etrlm(ldeg,5,id)*cp1
      &              +(ss12(is)*ss2a(is,ir)+ss11(is)*cs2a(is,ir))
@@ -997,15 +1010,15 @@ c
                 gz(lf,ir)=gz(lf,ir)+dgr
 c
                 roe(lf,ir)=roe(lf,ir)+(0.5d0,0.d0)
-     &              *( (updr-urdp)*ssb(is,ir)+(urdt-utdr)*csb(is,ir))
+     &              *( (urdp-updr)*ssb(is,ir)+(utdr-urdt)*csb(is,ir))
                 ron(lf,ir)=ron(lf,ir)+(0.5d0,0.d0)
-     &              *(-(updr-urdp)*csb(is,ir)+(urdt-utdr)*ssb(is,ir))
+     &              *(-(urdp-updr)*csb(is,ir)+(utdr-urdt)*ssb(is,ir))
                 roz(lf,ir)=roz(lf,ir)+(0.5d0,0.d0)*(updt-utdp)
 c
                 rot(1,1)=ssb(is,ir)
-                rot(1,2)=-csb(is,ir)
+                rot(1,2)=csb(is,ir)
                 rot(1,3)=(0.d0,0.d0)
-                rot(2,1)=csb(is,ir)
+                rot(2,1)=-csb(is,ir)
                 rot(2,2)=ssb(is,ir)
                 rot(2,3)=(0.d0,0.d0)
                 rot(3,1)=(0.d0,0.d0)
@@ -1024,7 +1037,7 @@ c
 c
                 do i=1,3
                   do j=1,3
-                    swp(i,j)=0.d0
+                    swp(i,j)=(0.d0,0.d0)
                     do k=1,3
                       swp(i,j)=swp(i,j)+rot(i,k)*rtz(k,j)
                     enddo
@@ -1032,7 +1045,7 @@ c
                 enddo
                 do i=1,3
                   do j=1,3
-                    enz(i,j)=0.d0
+                    enz(i,j)=(0.d0,0.d0)
                     do k=1,3
                       enz(i,j)=enz(i,j)+swp(i,k)*rot(j,k)
                     enddo

@@ -10,9 +10,9 @@ c
 c
 c     work space
 c
-      integer*4 i,j,istp,ly,key
+      integer*4 i,j,istp,ly,lyswap,key
       complex*16 y0(3),c(3),yup(3),ylw(3)
-      complex*16 wave(2),coef(2,2),b(2,2)
+      complex*16 wave(2),coef(3,3),b(3,2)
 c
       if(lylwa.gt.lylw)return
 c
@@ -56,7 +56,8 @@ c
 c     propagation from bottom to source
 c
       if(lylw.eq.lylwb)then
-        call qpstart0a(lylwb,1,ylw)
+        lyswap=lylwb
+        call qpstart0a(lyswap,1,ylw)
       else
         do i=1,3
           ylw(i)=mas3x3up(i,1,lylw)
@@ -95,48 +96,62 @@ c===============================================================================
 c
       b(1,1)=(1.d0,0.d0)
       b(2,1)=(0.d0,0.d0)
+      b(3,1)=(0.d0,0.d0)
       b(1,2)=(0.d0,0.d0)
       b(2,2)=(1.d0,0.d0)
-      do i=1,2
+      b(3,2)=(0.d0,0.d0)
+      do j=1,3
+        do i=1,3
+          coef(i,j)=(0.d0,0.d0)
+        enddo
+      enddo
+      do i=1,3
         coef(i,1)=yup(i)
         coef(i,2)=-ylw(i)
+        coef(i,3)=(0.d0,0.d0)
       enddo
+c
+c     a constant will be added to potential for region below the source
+c
+      coef(3,3)=-(1.d0,0.d0)
+c
       key=0
-      call cdsvd500(coef,b,2,2,0.d0,key)
+      call cdsvd500(coef,b,3,2,0.d0,key)
       if(key.eq.0)then
         print *,' Warning in qpsprop0: anormal exit from cdsvd500!'
         return
       endif
       if(lyr.le.lys)then
         do istp=1,2
-          do i=1,2
+          do i=1,3
             ypsv(i,istp)=b(1,istp)*y0(i)
           enddo
-          ypsv(5,istp)=b(1,istp)*y0(3)
-          ypsv(6,istp)=ypsv(5,istp)/crrup(lyr)
         enddo
       else
         do istp=1,2
-          do i=1,2
+          do i=1,3
             ypsv(i,istp)=b(2,istp)*y0(i)
           enddo
-c
-c         add a constant to the potential below the source so that
-c         it becomes continuous through the source level.
-c
-          ypsv(5,istp)=b(2,istp)*(y0(3)-ylw(3))+b(1,istp)*yup(3)
-          ypsv(6,istp)=ypsv(5,istp)/crrup(lyr)
+          ypsv(3,istp)=ypsv(3,istp)+b(3,istp)
         enddo
       endif
 c
-      if(lylwa.le.0)return
+      if(lylwa.le.0)then
+        do istp=1,2
+          ypsv(5,istp)=ypsv(3,istp)
+          ypsv(6,istp)=ypsv(3,istp)/crrup(lyr)
+          ypsv(3,istp)=(0.d0,0.d0)
+        enddo
+        return
+      endif
 c
 c
 c===============================================================================
 c
 c     propagation from bottom to source
 c
-      call qpstart0a(lylwa,1,ylw)
+      lyswap=lylwa
+      call qpstart0a(lyswap,1,ylw)
 c
       if(lylwa.eq.lyr.and.lylwa.gt.lys)call cmemcpy(ylw,y0,3)
 c
@@ -173,40 +188,42 @@ c===============================================================================
 c
       b(1,1)=(1.d0,0.d0)
       b(2,1)=(0.d0,0.d0)
+      b(3,1)=(0.d0,0.d0)
       b(1,2)=(0.d0,0.d0)
       b(2,2)=(1.d0,0.d0)
-      do i=1,2
+      b(3,2)=(0.d0,0.d0)
+      do i=1,3
         coef(i,1)=yup(i)
         coef(i,2)=-ylw(i)
+        coef(i,3)=(0.d0,0.d0)
       enddo
+      coef(3,3)=-(1.d0,0.d0)
       key=0
-      call cdsvd500(coef,b,2,2,0.d0,key)
+      call cdsvd500(coef,b,3,2,0.d0,key)
       if(key.eq.0)then
         print *,' Warning in qpsprop0: anormal exit from cdsvd500!'
         return
       endif
       if(lyr.le.lys)then
         do istp=1,2
-          do i=1,2
+          do i=1,3
             ypsv(i,istp)=ypsv(i,istp)-b(1,istp)*y0(i)
           enddo
-          ypsv(5,istp)=ypsv(5,istp)-b(1,istp)*y0(3)
-          ypsv(6,istp)=ypsv(6,istp)-b(1,istp)*y0(3)/crrup(lyr)
         enddo
       else
         do istp=1,2
-          do i=1,2
+          do i=1,3
             ypsv(i,istp)=ypsv(i,istp)-b(2,istp)*y0(i)
           enddo
-c
-c         add a constant to the potential below the source so that
-c         it becomes continuous through the source level.
-c
-          ypsv(5,istp)=ypsv(5,istp)
-     &            -b(2,istp)*(y0(3)-ylw(3))-b(1,istp)*yup(3)
-          ypsv(6,istp)=ypsv(6,istp)
-     &            -b(2,istp)*(y0(3)-ylw(3))-b(1,istp)*yup(3)/crrup(lyr)
+          ypsv(3,istp)=ypsv(3,istp)-b(3,istp)
         enddo
       endif
+c
+      do istp=1,2
+        ypsv(5,istp)=ypsv(3,istp)
+        ypsv(6,istp)=ypsv(3,istp)/crrup(lyr)
+        ypsv(3,istp)=(0.d0,0.d0)
+      enddo
+c
       return
       end

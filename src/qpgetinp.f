@@ -24,11 +24,12 @@ c     time (frequency) sampling
 c     =========================
 c
       call skipdoc(unit)
-      read(unit,*)twindow,dt
-      ntcut=1+idnint(twindow/dt)
+      read(unit,*)twindow,dtout
+      ntcut=1+idnint(twindow/dtout)
       nt=2
 100   nt=2*nt
       if(nt.lt.ntcut)goto 100
+      dt=twindow/dble(nt-1)
       nf=nt/2
       df=1.d0/(dble(nt)*dt)
 c
@@ -103,6 +104,12 @@ c
       if(ldegcut.lt.ldegmin)ldegcut=ldegmin
       ldegmin=min0(max0(1+ndmax,ldegmin),ldegcut)
       ldegmax=ldegcut+ndmax+1
+c
+c     modification for qsspppeg
+c
+      fgr=2.d0*(dble(nf)*df+fcut)
+      ldeggr=2*ldegmax
+      selsh=.false.
 c
       allocate(plm(0:ldegmax,0:2),stat=ierr)
       if(ierr.ne.0)stop ' Error in qpgettinp: plm not allocated!'
@@ -453,9 +460,9 @@ c
       read(unit,*)outfile
       call skipdoc(unit)
       read(unit,*)twinout
-      ntcutout=min0(nt,1+idnint(twinout/dt))
+      ntcutout=1+idnint(twinout/dtout)
       call skipdoc(unit)
-      read(unit,*)nlpf,f1corner,f2corner
+      read(unit,*)nbpf,f1corner,f2corner
       call skipdoc(unit)
       read(unit,*)slwlwcut,slwupcut
       slwlwcut=slwlwcut/KM2M

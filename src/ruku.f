@@ -5,19 +5,17 @@
       complex*16 y(i0,j0)
       external difmat
 c
-      integer*4 nrrmax
-      parameter(nrrmax=1000000)
-c
       integer*4 i,j,k,irr,nrr,nn
       real*8 rr,drr,epsilon
       real*8 yabs(6,3)
       complex*16 cdrr
       complex*16 y1(6,3),y2(6,3),yk(6,4),mat(6,6,3)
-      save nn
 c
+      integer*4 nrrmin,nrrmax
       real*8 eps
       complex*16 c1,c2,c6
-      data eps/1.0d-05/
+      data nrrmin,nrrmax/16,512/
+      data eps/1.0d-04/
       data c1,c2,c6/(1.d0,0.d0),(2.d0,0.d0),(6.d0,0.d0)/
 c
       do j=1,j0
@@ -25,7 +23,11 @@ c
           y2(i,j)=y(i,j)
         enddo
       enddo
-      nrr=max0(2,nrr0/4)
+      if(nrr0.gt.0)then
+        nrr=nrr0
+      else
+        nrr=nrrmin
+      endif
 100   continue
       drr=(rr2-rr1)/dble(nrr)
       cdrr=dcmplx(drr,0.d0)
@@ -82,7 +84,7 @@ c
         enddo
       enddo
 c
-      if(nrr.lt.nrrmax)then
+      if(nrr0.le.0.and.nrr.lt.nrrmax)then
         do j=1,j0
           do i=1,i0
             epsilon=eps*(cdabs(y2(i,j)-y(i,j))+eps*yabs(i,j))
@@ -92,8 +94,6 @@ c
             endif
           enddo
         enddo
-      else
-        print *, ' Warning in ruku: Convergence problem!'
       endif
 c
       do j=1,j0
@@ -101,13 +101,8 @@ c
           y(i,j)=y2(i,j)
         enddo
       enddo
-      if(nn.lt.nrr)then
-        nn=nrr
-c        write(*,'(a,i4,a,i3,a,i6)')' ruku: deg = ',ldeg,
-c     &                             ', layer = ',ly,', steps = ',nn
-      endif
 c
-      nrr0=nrr
+      if(nrr0.le.0)nrr0=nrr
 c
       return
       end

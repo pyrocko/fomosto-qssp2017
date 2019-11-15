@@ -12,8 +12,6 @@ c
       data nmax/2048/
       data eps/1.0d-03/
 c
-      dx=(xb-xa)/dble(n)
-c
       n=1
       dx=xb-xa
       y=0.5d0*(dsqrt(c*c-xa*xa)/xa+dsqrt(c*c-xb*xb)/xb)

@@ -21,11 +21,15 @@ c
       print *,'#    QQQQQ       SSSSS        SSSSS        P         #'
       print *,'#                                                    #'
       print *,'#          Complete synthetic seismograms            #'
-      print *,'#      (displacement/strain/stress/rotation)         #' 
+      print *,'#   (displacement/strain/stress/rotation/gravity)    #' 
       print *,'#                     based on                       #'
       print *,'#          a spherically symmetric earth model       #'
       print *,'#                                                    #'
       print *,'#                  (Version 2017)                    #'
+      print *,'#              Last update: 2019-5-27                #'
+      print *,'#                                                    #'
+      print *,'#     This version (QSSPPPEG) only provides          #'
+      print *,'#   (pre-P-wave) elasto-gravitational effect         #'
       print *,'#                                                    #'
       print *,'#                      by                            #'
       print *,'#                 Rongjiang Wang                     #'
@@ -33,7 +37,6 @@ c
       print *,'#                                                    #'
       print *,'#              Helmholtz Centre Potsdam              #'
       print *,'#    GFZ German Research Centre for Geosciences      #'
-      print *,'#           Last modified: September 2017            #'
       print *,'#                                                    #'
       print *,'######################################################'
       print *,'                                                      '
@@ -41,6 +44,7 @@ c
       read(*,'(a)')inputfile
       runtime=time()
 c
+      BIGG=BIGG0
       open(10,file=inputfile,status='old')
       call qpgetinp(10)
       close(10)
@@ -68,7 +72,7 @@ c
       runtime=time()-runtime
       write(*,'(a)')' #############################################'
       write(*,'(a)')' #                                           #'
-      write(*,'(a)')' #      End of computations with atmqssp     #'
+      write(*,'(a)')' #      End of computations with qsspppeg    #'
       write(*,'(a)')' #                                           #'
       write(*,'(a,i10,a)')' #       Run time: ',runtime,
      +                                           ' sec            #'

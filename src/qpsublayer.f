@@ -43,8 +43,8 @@ c
       if(ierr.ne.0)stop ' Error in qpsublayer: ldegpsv not allocated!'
       allocate(ldegsh(lymax),stat=ierr)
       if(ierr.ne.0)stop ' Error in qpsublayer: ldegsh not allocated!'
-      allocate(nruku(0:ldegmax,lymax),stat=ierr)
-      if(ierr.ne.0)stop ' Error in qpsublayer: ldegsh not allocated!'
+c      allocate(nruku(0:ldegmax,lymax),stat=ierr)
+c      if(ierr.ne.0)stop ' Error in qpsublayer: ldegsh not allocated!'
 c
       allocate(rrup(lymax),stat=ierr)
       if(ierr.ne.0)stop ' Error in qpsublayer: rrup not allocated!'
@@ -124,6 +124,20 @@ c
       if(ierr.ne.0)stop ' Error in qpsublayer: cgaup not allocated!'
       allocate(cgalw(lymax),stat=ierr)
       if(ierr.ne.0)stop ' Error in qpsublayer: cgalw not allocated!'
+c
+      allocate(cgr0(lymax),stat=ierr)
+      if(ierr.ne.0)stop ' Error in qpsublayer: cgr0 not allocated!'
+      allocate(cgrup0(lymax),stat=ierr)
+      if(ierr.ne.0)stop ' Error in qpsublayer: cgrup0 not allocated!'
+      allocate(cgrlw0(lymax),stat=ierr)
+      if(ierr.ne.0)stop ' Error in qpsublayer: cgrlw0 not allocated!'
+c
+      allocate(cga0(lymax),stat=ierr)
+      if(ierr.ne.0)stop ' Error in qpsublayer: cga0 not allocated!'
+      allocate(cgaup0(lymax),stat=ierr)
+      if(ierr.ne.0)stop ' Error in qpsublayer: cgaup0 not allocated!'
+      allocate(cgalw0(lymax),stat=ierr)
+      if(ierr.ne.0)stop ' Error in qpsublayer: cgalw0 not allocated!'
 c
       allocate(cua(8,6),stat=ierr)
       if(ierr.ne.0)stop ' Error in qpsublayer: cua not allocated!'
@@ -706,6 +720,15 @@ c
         endif
 	  write(*,1002)rrlw(ly)/1.d3,vplw(ly)/1.d3,vslw(ly)/1.d3,
      &             rolw(ly)/1.d3,qplw(ly),qslw(ly),dreal(cgrlw(ly))
+      enddo
+c
+      do ly=1,ly0
+        cgrup0(ly)=cgrup(ly)
+        cgrlw0(ly)=cgrlw(ly)
+        cgr0(ly)=cgr(ly)
+        cgaup0(ly)=cgaup(ly)
+        cgalw0(ly)=cgalw(ly)
+        cga0(ly)=cga(ly)
       enddo
 c
 1001	format(i4,f11.4,3f11.4,2f8.1,f9.4,$)

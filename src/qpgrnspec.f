@@ -3,21 +3,23 @@
       implicit none
       integer*4 ig
 c
-      integer*4 i,nn,il,istp,ly,lf,ldeg,ldeg0,ldegf,ldegup,ierr
-      real*8 f,ksp,xlw,xup,dll,omi,expo,rpath,slwcut
+      integer*4 i,nn,il,istp,ly,lf,ldeg,ldeg0,ldegf,ldegup
+      integer*4 ierr,nly,ncruku
+      real*8 f,h,ksp,xlw,xup,dll,omi,expo,rpath,slwcut
       real*8 fac,fl,depst1,depst2,dys2,rr0a,a,b,rrs,x
       real*8 kcut1(4),kcut2(4)
       complex*16 ca,cb,cag,cs1,cs2,cs3,cs4,ct1,ct2,cll1
-      complex*16 cmur,ys3d,yt1d,cg1,cg5
-      complex*16 ypsv(6,4),ypsvg(6,4),ysh(2,2)
-      logical*2 forruku
+      complex*16 cmur,ys3d,yt1d,cg1,cg5,cgfac
+      complex*16 ypsv(6,4),ypsv0(6,4),ypsvg(6,4),ysh(2,2),y1aux(4)
 c
       real*8 fsimpson
 c
-      real*8 expos
-      complex*16 c2,c3,c4
-      data expos/48.d0/
-      data c2,c3,c4/(2.d0,0.d0),(3.d0,0.d0),(4.d0,0.d0)/
+      real*8 expos,gfac
+      complex*16 c1,c2,c3,c4
+      data expos,gfac/24.d0,0.1d0/
+      data c1,c2,c3,c4/(1.d0,0.d0),(2.d0,0.d0),(3.d0,0.d0),(4.d0,0.d0)/
+c
+      cgfac=dcmplx(gfac,0.d0)
 c
       if(ig.eq.igfirst)then
         allocate(disk(0:ldegmax),stat=ierr)
@@ -138,16 +140,28 @@ c
       open(27,file=pspecfile(ig),form='unformatted',status='unknown')
       open(28,file=qspecfile(ig),form='unformatted',status='unknown')
 c
-      ldeg0=1+ndmax
-      do ldeg0=1+ndmax,ldegmin
-        dll=dsqrt(dble(ldeg0)*dabs(dble(ldeg0-1)))
-        expo=0.d0
-        do ly=min0(lys,lyr),max0(lys,lyr)-1
-          expo=expo+dll*dlog(rrup(ly)/rrlw(ly))
+      ldeg0=10+ndmax
+      if(vsup(lys).gt.0.d0)then
+        slwcut=1.d0/vsup(lys)
+      else
+        slwcut=1.d0/vpup(lys)
+      endif
+      if(vsup(lyr).gt.0.d0)then
+        slwcut=dmin1(slwcut,1.d0/vsup(lyr))
+      else
+        slwcut=dmin1(slwcut,1.d0/vpup(lyr))
+      endif
+      if(slwmax.ge.slwcut)then
+        do ldeg0=10+ndmax,ldegmin
+          dll=dsqrt(dble(ldeg0)*dabs(dble(ldeg0-1)))
+          expo=0.d0
+          do ly=min0(lys,lyr),max0(lys,lyr)-1
+            expo=expo+dll*dlog(rrup(ly)/rrlw(ly))
+          enddo
+          if(expo.gt.expos)goto 10
         enddo
-        if(expo.gt.expos)goto 10
-      enddo
-10    continue
+10      continue
+      endif
 c
       lylwa=0
       if(ipatha.eq.1)then
@@ -173,7 +187,7 @@ c
 30      continue
       endif
 c
-      omi=PI2*fcut
+      omi=PI2*dble(nfcut-1)*df
       slwcut=slwmax
 c
       if(lylwa.gt.lys+1)then
@@ -184,18 +198,12 @@ c
           slwcut=dmin1(slwcut,fac/vpup(lylwa))
         endif
       endif
+c
       if(idint(rearth*omi*slwcut).gt.ldegcut)then
         print *,' Warning from qpgrnspec: ldegcut may be too small!'
       endif
-      ldegup=min0(ldegcut,max0(ldeg0,idint(rearth*omi*slwcut)))
 c
-      if(fgr.gt.0.d0.or.ldeggr.gt.0)then
-        do ly=1,ly0
-          do ldeg=0,ldegup
-            nruku(ldeg,ly)=10
-          enddo
-        enddo
-      endif
+      ldegup=min0(ldegcut,max0(ldeg0,idint(rearth*omi*slwcut)))
 c
       write(*,*)' '
       write(*,'(a,i3,a,f7.2,a)')' ... calculate Green functions for ',
@@ -211,13 +219,20 @@ c
       write(27)nt,ntcut,dt,nf,nfcut,df,ldegup
       write(28)nt,ntcut,dt,nf,nfcut,df,ldegup
 c
-      if(.not.nogravity)then
-        do ly=1,ly0
-          do ldeg=0,ldegup
-            nruku(ldeg,ly)=0
-          enddo
+      do istp=1,6
+        do ldeg=0,ldegmax
+          ul0(ldeg,istp)=(0.d0,0.d0)
+          vl0(ldeg,istp)=(0.d0,0.d0)
+          wl0(ldeg,istp)=(0.d0,0.d0)
+          el0(ldeg,istp)=(0.d0,0.d0)
+          fl0(ldeg,istp)=(0.d0,0.d0)
+          gl0(ldeg,istp)=(0.d0,0.d0)
+          pl0(ldeg,istp)=(0.d0,0.d0)
+          ql0(ldeg,istp)=(0.d0,0.d0)
         enddo
-      endif
+      enddo
+c
+      icruku=0
 c
       do lf=1,nfcut
         f=dble(lf-1)*df
@@ -256,10 +271,10 @@ c
         do ldeg=0,ldegf
           if(nogravity.or.lylwa.gt.0.or.lylwb.le.ly0.or.
      &      .not.freesurf)then
-            forruku=.false.
+c            forruku=.false.
           else
             fac=dsqrt((f/fgr)**2+(dble(ldeg)/dble(ldeggr))**2)
-            forruku=fac.lt.1.d0+FLTAPER
+c            forruku=fac.lt.1.d0+FLTAPER
           endif
           dll=dsqrt(dble(ldeg)*dabs(dble(ldeg-1)))
 c
@@ -440,12 +455,12 @@ c
         if(selpsv.or.lys.lt.lyob.or.lys.ge.lycm.and.lys.lt.lycc)then
           ly=max0(lylwa,min0(lylwb,lylwp(0),lylws(0)))
           depst1=(rratmos-depatmos-rrup(ly))/KM2M
-          ly=max0(lylwa,min0(lylwb,lylwp(ldegf+1),lylws(ldegf+1)))
+          ly=max0(lylwa,min0(lylwb,lylwp(ldegf),lylws(ldegf)))
           depst2=(rratmos-depatmos-rrup(ly))/KM2M
         else
           ly=max0(lylwa,min0(lylwb,lylwt(1)))
           depst1=(rratmos-depatmos-rrup(ly))/KM2M
-          ly=max0(lylwa,min0(lylwb,lylwt(ldegf+1)))
+          ly=max0(lylwa,min0(lylwb,lylwt(ldegf)))
           depst2=(rratmos-depatmos-rrup(ly))/KM2M
         endif
 c
@@ -455,7 +470,7 @@ c
         if(lys.ge.lyob.and.lys.le.min0(lycm-1,ly0))then
           do ly=lyob,min0(lycm-1,ly0)
             ldegsh(ly)=1
-            do ldeg=1,ldegf+1
+            do ldeg=1,ldegf
               if(ly.ge.lyupt(ldeg).and.ly.le.lylwt(ldeg))then
                 ldegsh(ly)=ldeg
               endif
@@ -464,7 +479,7 @@ c
         else if(lys.ge.lycc)then
           do ly=lycc,ly0
             ldegsh(ly)=1
-            do ldeg=1,ldegf+1
+            do ldeg=1,ldegf
               if(ly.ge.lyupt(ldeg).and.ly.le.lylwt(ldeg))then
                 ldegsh(ly)=ldeg
               endif
@@ -477,7 +492,7 @@ c       of psv solution
 c
         do ly=1,ly0
           ldegpsv(ly)=0
-          do ldeg=0,ldegf+1
+          do ldeg=0,ldegf
             if(ly.ge.min0(lyupp(ldeg),lyups(ldeg)).and.
      &         ly.le.max0(lylwp(ldeg),lylws(ldeg)))then
               ldegpsv(ly)=ldeg
@@ -491,28 +506,112 @@ c
 c
         do ldeg=0,ldegf
 c
+          ncruku=0
+          do ly=1,ly0-1
+            h=rrup(ly)-rrlw(ly)
+            nly=1+idint(h*(f/vpup(ly)+0.5d0/rrlw(ly)))
+            if(vpup(ly).gt.0.d0)then
+              nly=max0(nly,1+idint(h*dmax1(f/vpup(ly),
+     &                             dble(ldeg)/rrlw(ly)))/5)
+            else
+              nly=max0(nly,1+idint(h*dmax1(f/vsup(ly),
+     &                             dble(ldeg)/rrlw(ly)))/5)
+            endif
+            ncruku=ncruku+nly
+          enddo
+          ncruku=ncruku+1000
+          if(icruku.gt.0)deallocate(nstep)
+          allocate(nstep(ncruku),stat=ierr)
+          if(ierr.ne.0)stop 'Error in qpgrnspec: nstep not allocated!'
+c
           if(.not.selpsv.or.ldeg.gt.ldegcut.or.
      &       max0(lylwp(ldeg),lylws(ldeg)).lt.max0(lylwa,lyr,lys).or.
      &       min0(lyupp(ldeg),lyups(ldeg)).gt.min0(lyr,lys))then
             do istp=1,4
+              y1aux(istp)=(0.d0,0.d0)
               do i=1,6
                 ypsv(i,istp)=(0.d0,0.d0)
               enddo
             enddo
           else if(nogravity)then
             call qppsvkern(f,ldeg,ypsv)
+            do istp=1,4
+              y1aux(istp)=ypsv(1,istp)
+              do i=1,4
+                ypsv(i,istp)=(0.d0,0.d0)
+              enddo
+            enddo
           else
             fac=dsqrt((f/fgr)**2+(dble(ldeg)/dble(ldeggr))**2)
             if(fac.le.1.d0)then
+              do i=1,ncruku
+                nstep(i)=0
+              enddo
+              icruku=0
               call qppsvkerng(f,ldeg,ypsv)
+              icruku=0
+              BIGG=BIGG0*gfac
+              do ly=1,ly0
+                cgaup(ly)=cgaup0(ly)*cgfac
+                cgalw(ly)=cgalw0(ly)*cgfac
+                cga(ly)=cga0(ly)*cgfac
+              enddo
+              call qppsvkerng(f,ldeg,ypsvg)
+              BIGG=BIGG0
+              do ly=1,ly0
+                cgaup(ly)=cgaup0(ly)
+                cgalw(ly)=cgalw0(ly)
+                cga(ly)=cga0(ly)
+              enddo
+              do istp=1,4
+                y1aux(istp)=ypsv(1,istp)
+                do i=1,4
+                  ypsv(i,istp)=(ypsv(i,istp)-ypsvg(i,istp))/(c1-cgfac)
+                enddo
+              enddo
             else if(fac.ge.1.d0+FLTAPER)then
               call qppsvkern(f,ldeg,ypsv)
+              do istp=1,4
+                y1aux(istp)=ypsv(1,istp)
+                do i=1,4
+                  ypsv(i,istp)=(0.d0,0.d0)
+                enddo
+              enddo
             else
+              do i=1,ncruku
+                nstep(i)=0
+              enddo
+              icruku=0
+              call qppsvkerng(f,ldeg,ypsv)
+              icruku=0
+              BIGG=BIGG0*gfac
+              do ly=1,ly0
+                cgaup(ly)=cgaup0(ly)*cgfac
+                cgalw(ly)=cgalw0(ly)*cgfac
+                cga(ly)=cga0(ly)*cgfac
+              enddo
               call qppsvkerng(f,ldeg,ypsvg)
-              call qppsvkern(f,ldeg,ypsv)
+              BIGG=BIGG0
+              do ly=1,ly0
+                cgaup(ly)=cgaup0(ly)
+                cgalw(ly)=cgalw0(ly)
+                cga(ly)=cga0(ly)
+              enddo
+              do istp=1,4
+                y1aux(istp)=ypsv(1,istp)
+                do i=1,4
+                  ypsvg(i,istp)=(ypsv(i,istp)-ypsvg(i,istp))/(c1-cgfac)
+                enddo
+              enddo
+c
               ca=dcmplx(dsin(0.5d0*PI*(fac-1.d0)/FLTAPER)**2,0.d0)
               cb=(1.d0,0.d0)-ca
+              call qppsvkern(f,ldeg,ypsv)
               do istp=1,4
+                y1aux(istp)=ca*ypsv(1,istp)+cb*y1aux(istp)
+                do i=1,4
+                  ypsv(i,istp)=(0.d0,0.d0)
+                enddo
                 do i=1,6
                   ypsv(i,istp)=ca*ypsv(i,istp)+cb*ypsvg(i,istp)
                 enddo
@@ -520,18 +619,23 @@ c
             endif
           endif
 c
-          if(.not.selsh.or.ldeg.gt.ldegcut.or.ldeg.eq.0.or.
-     &       lys.lt.lyob.or.lys.ge.lycm.and.lys.lt.lycc.or.
-     &       lylwt(ldeg).lt.max0(lylwa,lyr,lys).or.
-     &       lyupt(ldeg).gt.min0(lyr,lys))then
-            do istp=1,2
-              do i=1,2
-                ysh(i,istp)=(0.d0,0.d0)
-              enddo
+c          if(.not.selsh.or.ldeg.gt.ldegcut.or.ldeg.eq.0.or.
+c     &       lys.lt.lyob.or.lys.ge.lycm.and.lys.lt.lycc.or.
+c     &       lylwt(ldeg).lt.max0(lylwa,lyr,lys).or.
+c     &       lyupt(ldeg).gt.min0(lyr,lys))then
+c            do istp=1,2
+c              do i=1,2
+c                ysh(i,istp)=(0.d0,0.d0)
+c              enddo
+c            enddo
+c          else
+c            call qpshkern(f,ldeg,ysh)
+c          endif
+          do istp=1,2
+            do i=1,2
+              ysh(i,istp)=(0.d0,0.d0)
             enddo
-          else
-            call qpshkern(f,ldeg,ysh)
-          endif
+          enddo
 c
           if(lyr.gt.1)then
             cg1=cgalw(lyr-1)
@@ -560,7 +664,7 @@ c
             fl0(ldeg,1)=cs2*ypsv(4,2)
             gl0(ldeg,1)=(0.d0,0.d0)
             pl0(ldeg,1)=cs2*ypsv(5,2)
-            ql0(ldeg,1)=cs2*(cg1*ypsv(1,2)-cg5*ypsv(5,2)+ypsv(6,2))
+            ql0(ldeg,1)=cs2*(cg1*y1aux(2)-cg5*ypsv(5,2)+ypsv(6,2))
           endif
 c
 c         2. Explosion (M11=M22=M33=1)
@@ -568,8 +672,7 @@ c
           cs1=dcmplx( disk(ldeg)/roup(lys),0.d0)/cvpup(lys)**2
           cs2=dcmplx(-disk(ldeg)*4.d0/rrup(lys),0.d0)
      &       *(cvsup(lys)/cvpup(lys))**2
-          cs4=dcmplx( disk(ldeg)*2.d0/rrup(lys),0.d0)
-     &       *(cvsup(lys)/cvpup(lys))**2
+          cs4=-(0.5d0,0.d0)*cs2
           ul0(ldeg,2)=cs1*ypsv(1,1)+cs2*ypsv(1,2)+cs4*ypsv(1,4)
           vl0(ldeg,2)=cs1*ypsv(3,1)+cs2*ypsv(3,2)+cs4*ypsv(3,4)
           wl0(ldeg,2)=(0.d0,0.d0)
@@ -577,9 +680,9 @@ c
           fl0(ldeg,2)=cs1*ypsv(4,1)+cs2*ypsv(4,2)+cs4*ypsv(4,4)
           gl0(ldeg,2)=(0.d0,0.d0)
           pl0(ldeg,2)=cs1*ypsv(5,1)+cs2*ypsv(5,2)+cs4*ypsv(5,4)
-          ql0(ldeg,2)=cs1*(cg1*ypsv(1,1)-cg5*ypsv(5,1)+ypsv(6,1))
-     &               +cs2*(cg1*ypsv(1,2)-cg5*ypsv(5,2)+ypsv(6,2))
-     &               +cs4*(cg1*ypsv(1,4)-cg5*ypsv(5,4)+ypsv(6,4))
+          ql0(ldeg,2)=cs1*(cg1*y1aux(1)-cg5*ypsv(5,1)+ypsv(6,1))
+     &               +cs2*(cg1*y1aux(2)-cg5*ypsv(5,2)+ypsv(6,2))
+     &               +cs4*(cg1*y1aux(4)-cg5*ypsv(5,4)+ypsv(6,4))
 c
 c         3. CLVD (M33=1,M11=M22=-0.5)
 c
@@ -604,9 +707,9 @@ c
             fl0(ldeg,3)=cs1*ypsv(4,1)+cs2*ypsv(4,2)+cs4*ypsv(4,4)
             gl0(ldeg,3)=(0.d0,0.d0)
             pl0(ldeg,3)=cs1*ypsv(5,1)+cs2*ypsv(5,2)+cs4*ypsv(5,4)
-            ql0(ldeg,3)=cs1*(cg1*ypsv(1,1)-cg5*ypsv(5,1)+ypsv(6,1))
-     &                 +cs2*(cg1*ypsv(1,2)-cg5*ypsv(5,2)+ypsv(6,2))
-     &                 +cs4*(cg1*ypsv(1,4)-cg5*ypsv(5,4)+ypsv(6,4))
+            ql0(ldeg,3)=cs1*(cg1*y1aux(1)-cg5*ypsv(5,1)+ypsv(6,1))
+     &                 +cs2*(cg1*y1aux(2)-cg5*ypsv(5,2)+ypsv(6,2))
+     &                 +cs4*(cg1*y1aux(4)-cg5*ypsv(5,4)+ypsv(6,4))
           endif
 c
 c         4. Horizontal single force (F1=1)
@@ -621,7 +724,7 @@ c
             pl0(ldeg,4)=(0.d0,0.d0)
             ql0(ldeg,4)=(0.d0,0.d0)
           else
-            cs4=dcmplx(-0.5d0*disk(ldeg)/(dble(ldeg)*dble(ldeg+1)),0.d0)
+            cs4=dcmplx(-disk(ldeg)/(dble(ldeg)*dble(ldeg+1)),0.d0)
             ct2=cs4
             ul0(ldeg,4)=cs4*ypsv(1,4)
             vl0(ldeg,4)=cs4*ypsv(3,4)
@@ -630,7 +733,7 @@ c
             fl0(ldeg,4)=cs4*ypsv(4,4)
             gl0(ldeg,4)=ct2*ysh(2,2)
             pl0(ldeg,4)=cs4*ypsv(5,4)
-            ql0(ldeg,4)=cs4*(cg1*ypsv(1,4)-cg5*ypsv(5,4)+ypsv(6,4))
+            ql0(ldeg,4)=cs4*(cg1*y1aux(4)-cg5*ypsv(5,4)+ypsv(6,4))
           endif
 c
 c         5. Dip-slip (M13=M31=1)
@@ -655,7 +758,7 @@ c
             fl0(ldeg,5)=cs3*ypsv(4,3)
             gl0(ldeg,5)=ct1*ysh(2,1)
             pl0(ldeg,5)=cs3*ypsv(5,3)
-            ql0(ldeg,5)=cs3*(cg1*ypsv(1,3)-cg5*ypsv(5,3)+ypsv(6,3))
+            ql0(ldeg,5)=cs3*(cg1*y1aux(3)-cg5*ypsv(5,3)+ypsv(6,3))
           endif
 c
 c         6. Strike-slip (M12=M21=1)
@@ -680,7 +783,7 @@ c
             fl0(ldeg,6)=cs4*ypsv(4,4)
             gl0(ldeg,6)=ct2*ysh(2,2)
             pl0(ldeg,6)=cs4*ypsv(5,4)
-            ql0(ldeg,6)=cs4*(cg1*ypsv(1,4)-cg5*ypsv(5,4)+ypsv(6,4))
+            ql0(ldeg,6)=cs4*(cg1*y1aux(4)-cg5*ypsv(5,4)+ypsv(6,4))
           endif
         enddo
 c
@@ -725,5 +828,6 @@ c
      &             zh12p,zh12sv,zh12sh,
      &             zjupg,zjlwg,zhupg,zhlwg,wjg,whg)
       endif
+      if(icruku.gt.0)deallocate(nstep)
       return
       end

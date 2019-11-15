@@ -3,13 +3,13 @@ c
 c     CONSTANTS
 c     =========
       integer*4 ndmax
-      parameter(ndmax=2)
+      parameter(ndmax=4)
       real*8 PI,PI2
       parameter(PI=3.14159265358979d0,PI2=6.28318530717959d0)
       real*8 DEG2RAD,KM2M
       parameter(DEG2RAD=1.745329251994328d-02,KM2M=1.0d+03)
-      real*8 BIGG
-      parameter(BIGG=6.6732d-11)
+      real*8 BIGG0
+      parameter(BIGG0=6.6732d-11)
       real*8 RESOLUT
       parameter(RESOLUT=0.01d0)
       real*8 FLTAPER
@@ -17,20 +17,20 @@ c     =========
       real*8 FSBUP,FSBLW,FSBREF
       parameter(FSBUP=1.0d+02,FSBLW=2.5d-04,FSBREF=1.0d+00)
       real*8 fbvatm,fbvocean,fbvcore
-      parameter(fbvatm=1.0d-06,fbvocean=0.0d+00,fbvcore=0.0d+00)
+      parameter(fbvatm=0.d0,fbvocean=0.0d+00,fbvcore=0.0d+00)
 c
       logical*2 selpsv,selsh,setzh12a,setzh12t
       logical*2 nogravity,freesurf
       logical*2 dispersion
 c
-      integer*4 ngrn,nt,ntcut,ntcutout,nf,nfcut,nlpf
+      integer*4 ngrn,nt,ntcut,ntcutout,nf,nfcut,nbpf
       integer*4 lyadd,ipatha,ipathb,ldeggr,ldegmin,ldegcut,ldegmax
       integer*4 nr,igfirst,iglast
       integer*4 ns,l0,lymax
       integer*4 lys,lyr,lylwa,lylwb,lyos,lyob,lycm,lycc,ly0
       integer*4 icmp(11)
 c
-      real*8 dt,df,fi,fcut,fgr,rratmos,depatmos
+      real*8 dt,dtout,df,fi,fcut,fgr,rratmos,depatmos
       real*8 rearth,rr0,minpath,maxpath
       real*8 slwmax,slwlwcut,slwupcut,f1corner,f2corner
       real*8 dpr,freeairgrd
@@ -47,7 +47,6 @@ c
       logical*2,allocatable:: ksmallp(:),ksmalls(:),ksmallt(:)
 c
       integer*4,allocatable:: lygrn(:),grnsel(:),ldegpsv(:),ldegsh(:)
-      integer*4,allocatable:: nruku(:,:)
       integer*4,allocatable:: isg1(:),isg2(:),nsg(:)
       integer*4,allocatable:: idr(:,:)
       integer*4,allocatable:: lylwp(:),lylws(:),lylwt(:),
@@ -93,7 +92,8 @@ c
      &           cro(:),croup(:),crolw(:),cla(:),claup(:),clalw(:),
      &           cmu(:),cmuup(:),cmulw(:),cvp(:),cvpup(:),cvplw(:),
      &           cvs(:),cvsup(:),cvslw(:),cgr(:),cgrup(:),cgrlw(:),
-     &           cga(:),cgaup(:),cgalw(:)
+     &           cga(:),cgaup(:),cgalw(:),cgr0(:),cgrup0(:),cgrlw0(:),
+     &           cga0(:),cgaup0(:),cgalw0(:)
       complex*16,allocatable:: cps(:,:),cpt(:,:),kp(:),ks(:),kt(:)
       complex*16,allocatable:: mat2x2up(:,:,:),mat2x2lw(:,:,:),
      &        mat2x2inv(:,:,:),mas3x3up(:,:,:),mas3x3lw(:,:,:),
@@ -115,5 +115,11 @@ c
      &  wspecfile(:),especfile(:),fspecfile(:),gspecfile(:),
      &  pspecfile(:),qspecfile(:)
       character*10,allocatable:: rname(:)
+c
+c     ppeg parameters
+c
+      integer*4 icruku
+      integer*4,allocatable:: nstep(:)
+      real*8 BIGG
 c
       end module

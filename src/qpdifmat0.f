@@ -27,11 +27,9 @@ c
         mass=0.d0
         crorr=crolw(ly)
         rorr=dreal(crorr)
-        cgarr=dcmplx(2.d0*PI2*BIGG*rorr,0.d0)
       else if(ly.ge.lyos)then
         crorr=cup*croup(ly)+clw*crolw(ly)
         rorr=dreal(crorr)
-        cgarr=dcmplx(2.d0*PI2*BIGG*rorr,0.d0)
 c
         dro=(rorr-rolw(ly))/(rr-rrlw(ly))
         ro1=rolw(ly)-dro*rrlw(ly) 
@@ -43,14 +41,14 @@ c
         rorr=rolw(ly)*dexp(dlog(roup(ly)/rolw(ly))
      &                  *(rr-rrlw(ly))/(rrup(ly)-rrlw(ly)))
         crorr=dcmplx(rorr,0.d0)
-        cgarr=dcmplx(2.d0*PI2*BIGG*rorr,0.d0)
 c
         mass=2.d0*PI2/beta**3
      &      *(rorr*(beta*rr*(beta*rr-2.d0)+2.d0)
      &       -rolw(ly)*(beta*rrlw(ly)*(beta*rrlw(ly)-2.d0)+2.d0))
       endif
+      cgarr=dcmplx(2.d0*PI2*BIGG*rorr,0.d0)
       cgrrr=cgrlw(ly)*(crrlw(ly)/crr)**2
-     &     +dcmplx(BIGG*mass/rr**2,0.d0)
+     &     +dcmplx(BIGG0*mass/rr**2,0.d0)
 c
 c     stabilization at the static limit
 c

@@ -118,6 +118,12 @@ c
         call qpspropg0(ypsv,lyup,lylw)
       else
         call qpspropg(ypsv,ldeg,lyup,lylw)
+        if(ldeg.eq.1.and.lyr.eq.1)then
+          do istp=1,3,2
+            ypsv(5,istp)=(0.d0,0.d0)
+            ypsv(6,istp)=(0.d0,0.d0)
+          enddo
+        endif
       endif
 c
       return

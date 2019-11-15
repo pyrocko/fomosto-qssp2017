@@ -11,7 +11,7 @@ c
       real*8 peps
       complex*16 cldeg,cxp2,c2lp1,c2lp3,ca,cb,ya,yb
 c
-      double precision eps
+      real*8 eps
       complex*16 c0,c1,c2,c3
       data eps/1.0d-08/
       data c0,c1,c2,c3/(0.d0,0.d0),(1.d0,0.d0),(2.d0,0.d0),(3.d0,0.d0)/
