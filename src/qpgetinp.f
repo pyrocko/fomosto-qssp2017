@@ -9,7 +9,7 @@ c
       integer*4 ipath,isurf
       real*8 twindow,twinout,suppress,munit,sfe,sfn,sfz
       real*8 strike,dip,rake,depdif,dswap(14)
-      character*80 grndir,outfile,fswap
+      character*800 grndir,outfile,fswap
 c
 c     uniform receiver depth
 c     ======================
@@ -267,7 +267,7 @@ c
         enddo
       enddo
 c
-      do flen=80,1,-1
+      do flen=800,1,-1
         if(grndir(flen:flen).ne.' ')goto 200
       enddo
 200   continue
@@ -488,7 +488,7 @@ c
         read(unit,*)latr(ir),lonr(ir),rname(ir),tred(ir)
       enddo
 c
-      do flen=80,1,-1
+      do flen=800,1,-1
         if(outfile(flen:flen).ne.' ')goto 300
       enddo
 300   continue
