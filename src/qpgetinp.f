@@ -626,6 +626,11 @@ c
         endif
       enddo
 c
+      if(abs(dp0(l)-rratmos)/rratmos.lt.1.0d-6)then
+        write(*,*) ' Snapping lowest layer depth to earth model radius.'
+        dp0(l)=rratmos
+      endif
+
       if(dp0(l).gt.rratmos)then
         stop ' Error in qpgetinp: earth radius larger than pre-defined!'
       else if(dp0(l).lt.rratmos)then
