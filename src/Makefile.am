@@ -1,5 +1,5 @@
-bin_PROGRAMS = fomosto_qssp2017
-fomosto_qssp2017_SOURCES = banddpasss.f brunewvlet.f butterworth.f caxcb.f cdsvd500.f cmemcpy.f disazi.f \
+bin_PROGRAMS = fomosto_qsspppeg2017
+fomosto_qsspppeg2017_SOURCES = banddpasss.f brunewvlet.f butterworth.f caxcb.f cdsvd500.f cmemcpy.f disazi.f \
                             four1w.f fsimpson.f moments.f qpalloc.f qpdifmat0.f qpdifmatl.f qpdifmats.f \
                             qpfftinv.f qpgetinp.f qpgrnspec.f qplegendre.f qpmain.f qppsvkern.f qppsvkerng.f \
                             qpqmodel.f qpshkern.f qpsmat0.f qpsmatc.f qpsmat.f qpsprop0.f qpsprop.f qpspropg0.f \
