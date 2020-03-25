@@ -130,9 +130,9 @@
 #    [deg]   [deg]           [sec]
 #    (Note: Time_reduction = start time of the time window)
 #--------------------------------------------------------------------------------------------------------
-# disp | velo | acce | strain | strain_rate | stress | stress_rate | rotation | rotation_rate | gravity
+# disp | velo | acce | rotation | rot_rate |strain | strain_rate | stress | stress_rate | gravity |gravimeter
 #--------------------------------------------------------------------------------------------------------
-  1      1      1      0        0             0        0             0          0               1
+   1      1      1      0              0        0        0             0        0            0      0
   'test'
   8000.0
   0   0.05   0.25
