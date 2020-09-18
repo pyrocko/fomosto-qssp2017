@@ -6,7 +6,7 @@
       external difmat
 c
       integer*4 nrrmax
-      parameter(nrrmax=1000000)
+      parameter(nrrmax=512)
 c
       integer*4 i,j,k,irr,nrr,nn
       real*8 rr,drr,epsilon
@@ -17,7 +17,7 @@ c
 c
       real*8 eps
       complex*16 c1,c2,c6
-      data eps/1.0d-05/
+      data eps/1.0d-04/
       data c1,c2,c6/(1.d0,0.d0),(2.d0,0.d0),(6.d0,0.d0)/
 c
       do j=1,j0
@@ -101,11 +101,6 @@ c
           y(i,j)=y2(i,j)
         enddo
       enddo
-      if(nn.lt.nrr)then
-        nn=nrr
-c        write(*,'(a,i4,a,i3,a,i6)')' ruku: deg = ',ldeg,
-c     &                             ', layer = ',ly,', steps = ',nn
-      endif
 c
       nrr0=nrr
 c

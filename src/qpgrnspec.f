@@ -138,16 +138,28 @@ c
       open(27,file=pspecfile(ig),form='unformatted',status='unknown')
       open(28,file=qspecfile(ig),form='unformatted',status='unknown')
 c
-      ldeg0=1+ndmax
-      do ldeg0=1+ndmax,ldegmin
-        dll=dsqrt(dble(ldeg0)*dabs(dble(ldeg0-1)))
-        expo=0.d0
-        do ly=min0(lys,lyr),max0(lys,lyr)-1
-          expo=expo+dll*dlog(rrup(ly)/rrlw(ly))
+      ldeg0=10+ndmax
+      if(vsup(lys).gt.0.d0)then
+        slwcut=1.d0/vsup(lys)
+      else
+        slwcut=1.d0/vpup(lys)
+      endif
+      if(vsup(lyr).gt.0.d0)then
+        slwcut=dmin1(slwcut,1.d0/vsup(lyr))
+      else
+        slwcut=dmin1(slwcut,1.d0/vpup(lyr))
+      endif
+      if(slwmax.ge.slwcut)then
+        do ldeg0=10+ndmax,ldegmin
+          dll=dsqrt(dble(ldeg0)*dabs(dble(ldeg0-1)))
+          expo=0.d0
+          do ly=min0(lys,lyr),max0(lys,lyr)-1
+            expo=expo+dll*dlog(rrup(ly)/rrlw(ly))
+          enddo
+          if(expo.gt.expos)goto 10
         enddo
-        if(expo.gt.expos)goto 10
-      enddo
-10    continue
+10      continue
+      endif
 c
       lylwa=0
       if(ipatha.eq.1)then
@@ -173,7 +185,7 @@ c
 30      continue
       endif
 c
-      omi=PI2*fcut
+      omi=PI2*dble(nfcut-1)*df
       slwcut=slwmax
 c
       if(lylwa.gt.lys+1)then
@@ -184,9 +196,7 @@ c
           slwcut=dmin1(slwcut,fac/vpup(lylwa))
         endif
       endif
-      if(idint(rearth*omi*slwcut).gt.ldegcut)then
-        print *,' Warning from qpgrnspec: ldegcut may be too small!'
-      endif
+c
       ldegup=min0(ldegcut,max0(ldeg0,idint(rearth*omi*slwcut)))
 c
       if(fgr.gt.0.d0.or.ldeggr.gt.0)then
@@ -219,6 +229,19 @@ c
         enddo
       endif
 c
+      do istp=1,6
+        do ldeg=0,ldegmax
+          ul0(ldeg,istp)=(0.d0,0.d0)
+          vl0(ldeg,istp)=(0.d0,0.d0)
+          wl0(ldeg,istp)=(0.d0,0.d0)
+          el0(ldeg,istp)=(0.d0,0.d0)
+          fl0(ldeg,istp)=(0.d0,0.d0)
+          gl0(ldeg,istp)=(0.d0,0.d0)
+          pl0(ldeg,istp)=(0.d0,0.d0)
+          ql0(ldeg,istp)=(0.d0,0.d0)
+        enddo
+      enddo
+c
       do lf=1,nfcut
         f=dble(lf-1)*df
         omi=PI2*f
@@ -249,7 +272,7 @@ c
           ksmallt(ly)=.true.
         enddo
 c
-        ldegf=min0(ldegup,max0(ldeg0,idint(rearth*omi*slwcut)))
+        ldegf=min0(ldegup,ldeg0+idint(dble(ldegup-ldeg0)*f/fcut))
         setzh12a=.false.
         setzh12t=.false.
 c
@@ -440,12 +463,12 @@ c
         if(selpsv.or.lys.lt.lyob.or.lys.ge.lycm.and.lys.lt.lycc)then
           ly=max0(lylwa,min0(lylwb,lylwp(0),lylws(0)))
           depst1=(rratmos-depatmos-rrup(ly))/KM2M
-          ly=max0(lylwa,min0(lylwb,lylwp(ldegf+1),lylws(ldegf+1)))
+          ly=max0(lylwa,min0(lylwb,lylwp(ldegf),lylws(ldegf)))
           depst2=(rratmos-depatmos-rrup(ly))/KM2M
         else
           ly=max0(lylwa,min0(lylwb,lylwt(1)))
           depst1=(rratmos-depatmos-rrup(ly))/KM2M
-          ly=max0(lylwa,min0(lylwb,lylwt(ldegf+1)))
+          ly=max0(lylwa,min0(lylwb,lylwt(ldegf)))
           depst2=(rratmos-depatmos-rrup(ly))/KM2M
         endif
 c
@@ -455,7 +478,7 @@ c
         if(lys.ge.lyob.and.lys.le.min0(lycm-1,ly0))then
           do ly=lyob,min0(lycm-1,ly0)
             ldegsh(ly)=1
-            do ldeg=1,ldegf+1
+            do ldeg=1,ldegf
               if(ly.ge.lyupt(ldeg).and.ly.le.lylwt(ldeg))then
                 ldegsh(ly)=ldeg
               endif
@@ -464,7 +487,7 @@ c
         else if(lys.ge.lycc)then
           do ly=lycc,ly0
             ldegsh(ly)=1
-            do ldeg=1,ldegf+1
+            do ldeg=1,ldegf
               if(ly.ge.lyupt(ldeg).and.ly.le.lylwt(ldeg))then
                 ldegsh(ly)=ldeg
               endif
@@ -477,7 +500,7 @@ c       of psv solution
 c
         do ly=1,ly0
           ldegpsv(ly)=0
-          do ldeg=0,ldegf+1
+          do ldeg=0,ldegf
             if(ly.ge.min0(lyupp(ldeg),lyups(ldeg)).and.
      &         ly.le.max0(lylwp(ldeg),lylws(ldeg)))then
               ldegpsv(ly)=ldeg
@@ -621,7 +644,7 @@ c
             pl0(ldeg,4)=(0.d0,0.d0)
             ql0(ldeg,4)=(0.d0,0.d0)
           else
-            cs4=dcmplx(-0.5d0*disk(ldeg)/(dble(ldeg)*dble(ldeg+1)),0.d0)
+            cs4=dcmplx(-disk(ldeg)/(dble(ldeg)*dble(ldeg+1)),0.d0)
             ct2=cs4
             ul0(ldeg,4)=cs4*ypsv(1,4)
             vl0(ldeg,4)=cs4*ypsv(3,4)

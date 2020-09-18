@@ -25,7 +25,8 @@ c
       print *,'#                     based on                       #'
       print *,'#          a spherically symmetric earth model       #'
       print *,'#                                                    #'
-      print *,'#                  (Version 2017)                    #'
+      print *,'#                  (Version 2020)                    #'
+      print *,'#   Last update (correction of errors): 2020-04-14   #'
       print *,'#                                                    #'
       print *,'#                      by                            #'
       print *,'#                 Rongjiang Wang                     #'
@@ -68,7 +69,7 @@ c
       runtime=time()-runtime
       write(*,'(a)')' #############################################'
       write(*,'(a)')' #                                           #'
-      write(*,'(a)')' #      End of computations with atmqssp     #'
+      write(*,'(a)')' #      End of computations with qssp2020    #'
       write(*,'(a)')' #                                           #'
       write(*,'(a,i10,a)')' #       Run time: ',runtime,
      +                                           ' sec            #'

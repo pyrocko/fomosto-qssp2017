@@ -7,7 +7,7 @@ c     work space
 c
       integer*4 i,j,l,ir,ig,isg,is,is1,flen,iswap,nhypo,sdfsel,ierr
       integer*4 ipath,isurf
-      real*8 twindow,twinout,suppress,munit,sfe,sfn,sfz
+      real*8 twindow,twinout,suppress,munit,sfe,sfn,sfz,omi
       real*8 strike,dip,rake,depdif,dswap(14)
       character*80 grndir,outfile,fswap
 c
@@ -24,11 +24,12 @@ c     time (frequency) sampling
 c     =========================
 c
       call skipdoc(unit)
-      read(unit,*)twindow,dt
-      ntcut=1+idnint(twindow/dt)
+      read(unit,*)twindow,dtout
+      ntcut=1+idnint(twindow/dtout)
       nt=2
 100   nt=2*nt
       if(nt.lt.ntcut)goto 100
+      dt=twindow/dble(nt-1)
       nf=nt/2
       df=1.d0/(dble(nt)*dt)
 c
@@ -102,7 +103,20 @@ c
       endif
       if(ldegcut.lt.ldegmin)ldegcut=ldegmin
       ldegmin=min0(max0(1+ndmax,ldegmin),ldegcut)
-      ldegmax=ldegcut+ndmax+1
+      ldegmax=ldegcut+1+ndmax
+c
+      omi=PI*fcut
+      if(idint(rearth*omi*slwmax).gt.ldegmax)then
+        write(*,'(a)')' Warning from qpgrnspec:'
+        write(*,'(a)')' Maximum harmonic degree not large enough!'
+        write(*,'(a,i6)')' Suggestion: increase the max. degree to >= ',
+     &                   1+idint(rearth*omi*slwmax)
+        write(*,'(a,f10.5,a)')' ... or decrease frequency cutoff to <=',
+     &                   dble(ldegcut)/(rearth*PI2*slwmax),' Hz'
+        write(*,'(a,f10.5,a)')' ... or decrease slowness cutoff to <=',
+     &                   dble(ldegcut)*KM2M/(rearth*omi),' s/km'
+        stop
+      endif
 c
       allocate(plm(0:ldegmax,0:2),stat=ierr)
       if(ierr.ne.0)stop ' Error in qpgettinp: plm not allocated!'
@@ -453,9 +467,9 @@ c
       read(unit,*)outfile
       call skipdoc(unit)
       read(unit,*)twinout
-      ntcutout=min0(nt,1+idnint(twinout/dt))
+      ntcutout=1+idnint(twinout/dtout)
       call skipdoc(unit)
-      read(unit,*)nlpf,f1corner,f2corner
+      read(unit,*)nbpf,f1corner,f2corner
       call skipdoc(unit)
       read(unit,*)slwlwcut,slwupcut
       slwlwcut=slwlwcut/KM2M

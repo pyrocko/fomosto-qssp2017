@@ -10,7 +10,7 @@ c
 c
 c     work space
 c
-      integer*4 i,j,j0,istp,ly,ily,nly,key
+      integer*4 i,j,j0,istp,ly,lyswap,ily,nly,key
       real*8 y4max,rr1,rr2,dlnr,h,f
       complex*16 cdet,alf,bet,cyabs,cyswap,ca,cb
       complex*16 y0(6,3),c(2)
@@ -39,6 +39,10 @@ c
 c
           yupc(1,2)=(1.d0,0.d0)
           yupc(3,2)=cgrup(lyup)/crrup(lyup)
+c
+          if(ldeg.eq.1)then
+            yupc(4,2)=(3.d0,0.d0)*yupc(3,2)
+          endif
         else
           call qpstart4g(ldeg,lyup,2,yupc)
         endif
@@ -204,10 +208,9 @@ c
             enddo
             yup(1,1)=(1.d0,0.d0)
             yup(3,2)=(1.d0,0.d0)
+            yup(5,3)=(1.d0,0.d0)
             if(ldeg.eq.1)then
-              yup(6,3)=(1.d0,0.d0)
-            else
-              yup(5,3)=(1.d0,0.d0)
+              yup(6,3)=(3.d0,0.d0)*yup(5,3)
             endif
           else
             call qpstart6g(ldeg,lyup,2,yup)
@@ -357,7 +360,7 @@ c
             yupc(i,2)=comi2*yupc(i,2)
           enddo
           yupc(2,2)=c(2)
-          if(lycc.le.lyr.and.lycc.gt.lys)then
+          if(lycm.ge.lyr)then
             do i=1,6
               y0(i,1)=c(2)*y0(i,1)-c(1)*y0(i,2)
               y0(i,2)=comi2*y0(i,2)
@@ -1326,7 +1329,8 @@ c
 c
 c       lowest layer is within inner core
 c
-        call qpstart6g(ldeg,lylwa,1,ylw)
+        lyswap=lylwa
+        call qpstart6g(ldeg,lyswap,1,ylw)
 c
         if(lylwa.eq.lyr.and.lylwa.gt.lys)then
           call cmemcpy(ylw,y0,18)
@@ -1484,7 +1488,8 @@ c
 c
 c         lowest layer is within the liquid core
 c
-          call qpstart4g(ldeg,lylwa,1,ylwc)
+          lyswap=lylwa
+          call qpstart4g(ldeg,lyswap,1,ylwc)
 c
           if(lylwa.eq.lyr.and.lylwa.gt.lys)then
             do j=1,3
@@ -1608,7 +1613,8 @@ c
 c
 c         lowest layer is within the mantle
 c
-          call qpstart6g(ldeg,lylwa,1,ylw)
+          lyswap=lylwa
+          call qpstart6g(ldeg,lyswap,1,ylw)
 c
           if(lylwa.eq.lyr.and.lylwa.gt.lys)then
             call cmemcpy(ylw,y0,18)
@@ -1767,7 +1773,8 @@ c
 c
 c         lowest layer is within the atmosphere
 c
-          call qpstart4g(ldeg,lylwa,1,ylwc)
+          lyswap=lylwa
+          call qpstart4g(ldeg,lyswap,1,ylwc)
 c
           if(lylwa.eq.lyr.and.lylwa.gt.lys)then
             do j=1,3

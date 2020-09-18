@@ -1,8 +1,8 @@
-      subroutine qplegendre(ldeg,raddis)
-      use qpalloc
+      subroutine legendre(raddis,plm,ldeg,ldegmax)
       implicit none
-      integer*4 ldeg
+      integer*4 ldeg,ldegmax
       real*8 raddis
+      real*8 plm(0:ldegmax,0:2)
 c
 c     calculate Plm(l,m,x)/(1-x^2)^(m/2)
 c     where Plm are the associated Legendre polynomials

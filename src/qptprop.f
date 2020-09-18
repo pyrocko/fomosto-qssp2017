@@ -10,7 +10,7 @@ c
 c
 c     work space
 c
-      integer*4 i,istp,ly,key
+      integer*4 i,istp,ly,lyswap,key
       complex*16 cldeg
       complex*16 y0(2),yup(2),ylw(2),wave(2),c(2)
       complex*16 coef(2,2),b(2,2)
@@ -130,7 +130,8 @@ c===============================================================================
 c
 c     propagation from bottom to source
 c
-      call qpstart2t(ldeg,lylwa,1,ylw)
+      lyswap=lylwa
+      call qpstart2t(ldeg,lyswap,1,ylw)
       if(lylwa.eq.lyr.and.lylwa.gt.lys)then
         call cmemcpy(ylw,y0,2)
       endif

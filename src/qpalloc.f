@@ -23,14 +23,14 @@ c
       logical*2 nogravity,freesurf
       logical*2 dispersion
 c
-      integer*4 ngrn,nt,ntcut,ntcutout,nf,nfcut,nlpf
+      integer*4 ngrn,nt,ntcut,ntcutout,nf,nfcut,nbpf
       integer*4 lyadd,ipatha,ipathb,ldeggr,ldegmin,ldegcut,ldegmax
       integer*4 nr,igfirst,iglast
       integer*4 ns,l0,lymax
       integer*4 lys,lyr,lylwa,lylwb,lyos,lyob,lycm,lycc,ly0
       integer*4 icmp(11)
 c
-      real*8 dt,df,fi,fcut,fgr,rratmos,depatmos
+      real*8 dt,dtout,df,fi,fcut,fgr,rratmos,depatmos
       real*8 rearth,rr0,minpath,maxpath
       real*8 slwmax,slwlwcut,slwupcut,f1corner,f2corner
       real*8 dpr,freeairgrd

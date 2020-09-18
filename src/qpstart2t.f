@@ -10,7 +10,7 @@ c
       real*8 teps
       complex*16 clm1,ca,cb
 c
-      double precision eps
+      real*8 eps
       data eps/1.0d-08/
 c
       clm1=dcmplx(dble(ldeg-1),0.d0)

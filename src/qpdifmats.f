@@ -7,6 +7,7 @@
 c
 c     6x6 coefficient matrix for spheroidal mode l > 0 in solid media
 c
+      real*8 dro,rorr,ro1,mass
       complex*16 cldeg,clp1,cll1,cup,clw
       complex*16 crr,drr,crorr,clarr,cmurr,cxirr,cgarr,cgrrr
 c
@@ -19,12 +20,32 @@ c
       crr=dcmplx(rr,0.d0)
       cup=(crr-rrlw(ly))/(crrup(ly)-crrlw(ly))
       clw=c1-cup
-      crorr=cup*croup(ly)+clw*crolw(ly)
       clarr=cup*claup(ly)+clw*clalw(ly)
       cmurr=cup*cmuup(ly)+clw*cmulw(ly)
-      cgarr=cup*cgaup(ly)+clw*cgalw(ly)
-      cgrrr=cup*cgrup(ly)+clw*cgrlw(ly)
       cxirr=clarr+c2*cmurr
+c
+      crorr=cup*croup(ly)+clw*crolw(ly)
+      rorr=dreal(crorr)
+      cgarr=dcmplx(2.d0*PI2*BIGG*rorr,0.d0)
+c
+      if(rr.le.rrlw(ly))then
+        mass=0.d0
+        crorr=crolw(ly)
+        rorr=dreal(crorr)
+        cgarr=dcmplx(2.d0*PI2*BIGG*rorr,0.d0)
+      else
+        crorr=cup*croup(ly)+clw*crolw(ly)
+        rorr=dreal(crorr)
+        cgarr=dcmplx(2.d0*PI2*BIGG*rorr,0.d0)
+        dro=(rorr-rolw(ly))/(rr-rrlw(ly))
+        ro1=rorr-dro*rrlw(ly) 
+        mass=PI*(rr-rrlw(ly))*((4.d0/3.d0)*ro1
+     &        *(rr**2+rr*rrlw(ly)+rrlw(ly)**2)
+     &        +dro*(rr**3+rr**2*rrlw(ly)
+     &        +rr*rrlw(ly)**2+rrlw(ly)**3))
+      endif
+      cgrrr=cgrlw(ly)*(crrlw(ly)/crr)**2
+     &     +dcmplx(BIGG*mass/rr**2,0.d0)
 c
       mat(1,1)=(c1-c2*clarr/cxirr)/crr
       mat(1,2)=c1/cxirr/crr

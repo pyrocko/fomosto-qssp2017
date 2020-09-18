@@ -11,7 +11,7 @@ c
       complex*16 ypsv(6,4)
 c
       integer i,ly,istp,lyup,lylw,lwup
-      double precision xmin
+      real*8 xmin
       complex*16 cldeg,cruplw,cxp,cxs
 c
       complex*16 c1,c2
