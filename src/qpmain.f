@@ -26,7 +26,7 @@ c
       print *,'#          a spherically symmetric earth model       #'
       print *,'#                                                    #'
       print *,'#                  (Version 2020)                    #'
-      print *,'#   Last update (correction of errors): 2020-04-14   #'
+      print *,'#   Last update (correction of errs): 2020-04-14   #'
       print *,'#                                                    #'
       print *,'#                      by                            #'
       print *,'#                 Rongjiang Wang                     #'
